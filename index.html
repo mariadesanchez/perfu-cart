@@ -329,6 +329,14 @@
   #cartTabs button small{font-weight:600;opacity:.8;margin-left:4px;font-variant-numeric:tabular-nums}
   .totals .bySuper{display:block;margin-top:10px;padding-top:8px;border-top:1.5px dashed var(--line)}
   .totals .bySuper[hidden]{display:none}
+  .buy{display:grid;gap:10px;margin:16px 0 6px}
+  .buy[hidden]{display:none}
+  .buy .btn{width:100%}
+  .buy .hint{margin:0}
+  .buy .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45}
+  .buy .note b{display:block;margin-bottom:4px}
+  .buy .note a{display:flex;justify-content:space-between;gap:10px;padding:7px 0;color:var(--ink);text-decoration:none;border-top:1px dashed var(--line)}
+  .buy .note a span:last-child{color:var(--accent-deep);font-weight:700;white-space:nowrap}
   .bySuper button{appearance:none;border:0;background:none;width:100%;display:flex;justify-content:space-between;padding:6px 0;font:inherit;font-size:15px;color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
   .bySuper button span:first-child{font-weight:700}
   .bySuper button:hover span:first-child{text-decoration:underline}
@@ -693,6 +701,7 @@
       <div class="grand"><span id="tGrandLbl">Total</span><span id="tGrand">$ 0</span></div>
       <div class="bySuper" id="bySuper" hidden></div>
     </div>
+    <div class="buy" id="buyBox" hidden></div>
     <div class="actions" id="actions" hidden>
       <button class="btn btn-ghost" id="shareBtn">Compartir lista</button>
       <button class="btn btn-ghost" id="csvBtn">Descargar Excel (CSV)</button>
@@ -1059,6 +1068,7 @@
         bs.appendChild(b);
       });
     }
+    renderBuy(groups);
     $('clearBtn').textContent = cartView === 'all' ? 'Vaciar el ticket' : 'Vaciar carrito ' + cartView;
     $('tagCount').textContent = cart.length; $('tagCount').hidden = !cart.length;
     const tb = $('tabBadge'); if (tb) { if (tb.textContent !== String(cart.length)) { tb.classList.remove('pop'); void tb.offsetWidth; tb.classList.add('pop'); } tb.textContent = cart.length; tb.hidden = false; tb.classList.toggle('zero', !cart.length); }
@@ -1070,6 +1080,73 @@
   try {
     new IntersectionObserver(([e]) => { if (view === 'inicio') $('minibar').classList.toggle('show', !e.isIntersecting); }, { threshold: 0 }).observe($('tagBox'));
   } catch(e) {}
+
+  // ---------- pasar el carrito a la tienda para pagar ----------
+  const superKey = () => Object.fromEntries(Object.entries(SUPERS).map(([k, v]) => [v, k]));
+  const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', gpsfarma: 'https://gpsfarma.com' };
+  function renderBuy(groups){
+    const bx = $('buyBox'); bx.innerHTML = '';
+    const SUPER_KEY = superKey();
+    const names = [...groups.keys()].filter(n => SUPER_KEY[n] && (cartView === 'all' || cartView === n));
+    bx.hidden = !names.length; if (!names.length) return;
+    const h = document.createElement('div'); h.className = 'hint';
+    h.textContent = names.length > 1 ? 'Pasá cada carrito a su tienda para pagar y elegir el envío o el retiro.' : 'Pasá el carrito a la tienda para pagar y elegir el envío o el retiro.';
+    bx.appendChild(h);
+    names.forEach(n => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-primary';
+      b.textContent = 'Pagar en ' + n + ' ›';
+      b.addEventListener('click', () => exportarCarrito(n, b));
+      bx.appendChild(b);
+    });
+  }
+  async function completarDatos(k, it){
+    if (k === 'gpsfarma' ? it.link : it.sku) return;
+    if (!it.ean) return;
+    try {
+      const r = await fetch('/api/vtex?tienda=' + k + '&ean=' + encodeURIComponent(it.ean) + '&limite=5');
+      const d = await r.json();
+      const p = (d.productos || []).find(p => p.exacto);
+      if (p) { it.sku = p.sku || ''; it.seller = p.seller || ''; it.link = p.link || it.link || ''; }
+    } catch(_) {}
+  }
+  function notaProductos(titulo, items, k){
+    const d = document.createElement('div'); d.className = 'note';
+    d.innerHTML = '<b></b>'; d.querySelector('b').textContent = titulo;
+    items.forEach(it => {
+      const a = document.createElement('a'); a.target = '_blank'; a.rel = 'noopener';
+      a.href = it.link || (TIENDA_HOST[k] + '/' + (k === 'gpsfarma' ? 'catalogsearch/result/?q=' : '') + encodeURIComponent(it.ean || it.name) + (k === 'gpsfarma' ? '' : '?_q=' + encodeURIComponent(it.ean || it.name) + '&map=ft'));
+      a.innerHTML = '<span></span><span></span>';
+      a.children[0].textContent = fmtQ(Math.max(1, Math.ceil(it.qty))) + ' × ' + it.name; a.children[1].textContent = 'Abrir ›';
+      d.appendChild(a);
+    });
+    return d;
+  }
+  async function exportarCarrito(n, btn){
+    const k = superKey()[n], host = TIENDA_HOST[k];
+    const items = cart.filter(it => groupOf(it) === n);
+    const bx = $('buyBox'); bx.querySelectorAll('.note').forEach(x => x.remove());
+    // la pestaña se abre ya, con el toque, para que el navegador no la bloquee
+    const w = k === 'gpsfarma' ? null : window.open('', '_blank');
+    const old = btn.textContent; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Preparando el carrito…';
+    await Promise.all(items.map(it => completarDatos(k, it)));
+    saveCart();
+    btn.disabled = false; btn.textContent = old;
+    if (k === 'gpsfarma') {
+      btn.after(notaProductos('GPS Farma no permite cargar el carrito desde otra página. Abrí cada producto y agregalo; el envío a la farmacia que elijas se elige al pagar.', items, k));
+      return;
+    }
+    const ok = items.filter(it => it.sku), faltan = items.filter(it => !it.sku);
+    if (!ok.length) {
+      if (w) w.close();
+      btn.after(notaProductos('No encontré estos productos en ' + n + ' para cargarlos solos. Abrilos y agregalos desde la tienda:', faltan, k));
+      return;
+    }
+    const qs = ok.map(it => 'sku=' + encodeURIComponent(it.sku) + '&qty=' + Math.max(1, Math.ceil(it.qty)) + '&seller=' + encodeURIComponent(it.seller || '1')).join('&');
+    const url = host + '/checkout/cart/add?' + qs + '&redirect=true';
+    if (w) { try { w.opener = null; } catch(_) {} w.location.href = url; } else location.href = url;
+    toast(ok.length === 1 ? 'Abrí el carrito de ' + n : 'Pasé ' + ok.length + ' productos a ' + n);
+    if (faltan.length) btn.after(notaProductos('Estos no se pudieron pasar solos. Agregalos desde la tienda:', faltan, k));
+  }
 
   function listText(){
     let total=0;
@@ -1924,7 +2001,7 @@
       const sup = SUPERS[x.k];
       const ex = cart.find(c => c.ean && c.ean === x.p.ean && c.super === sup);
       if (ex) { ex.qty = Math.round((ex.qty + x.it.qty) * 1000) / 1000; ex.price = x.u; }
-      else cart.unshift({ id: Date.now() + Math.random(), ean: x.p.ean || x.it.ean || '', name: x.p.nombre, price: x.u, qty: x.it.qty, promo: usedPromo ? x.p.promo : '', super: sup });
+      else cart.unshift({ id: Date.now() + Math.random(), ean: x.p.ean || x.it.ean || '', name: x.p.nombre, price: x.u, qty: x.it.qty, promo: usedPromo ? x.p.promo : '', super: sup, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' });
     });
     cartView = 'all'; saveCart(); render(); renderLists();
     toast('Carritos armados');

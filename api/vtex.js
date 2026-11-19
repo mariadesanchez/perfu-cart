@@ -124,6 +124,8 @@ function mapear(products, ean) {
       sin_stock: sinStock,
       rubro: rubroVtex(p),
       link: p.link || '',
+      sku: String(item.itemId || ''),
+      seller: String((seller && seller.sellerId) || '1'),
     });
   }
   return out;
