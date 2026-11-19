@@ -14,6 +14,7 @@
 <meta name="description" content="Todas las ofertas de cada tienda, comparación de precios entre 5 perfumerías y farmacias y tus listas con el mail diario de precios.">
 <title>Perfu Cart</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
   :root{
     --bg:#FFF5F9; --card:#ffffff; --ink:#1B2140; --muted:#6C6880; --line:#F6DCE7;
@@ -398,6 +399,9 @@
   .gate-btn{width:100%;background:#fff!important;color:#1B2140!important;font-size:17px;padding:15px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 5px 0 rgba(0,0,0,.18)}
   .gate-btn .ss-g{width:22px;height:22px}
   .gate-btn[disabled]{opacity:.7}
+  .gate-btn,[data-login]{position:relative}
+  .gis-ov{position:absolute;inset:0;overflow:hidden;opacity:.001;z-index:2;border-radius:inherit}
+  .gis-ov>div{transform-origin:0 0;width:max-content}
   .gate-msg{margin-top:14px;background:#fff;color:#1B2140;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45}
   .gate-msg b{display:block;font-size:15px;margin-bottom:2px}
   .gate-links{margin-top:14px;font-size:13px;opacity:.9}
@@ -2812,7 +2816,7 @@
   }
   function gateMsg(titulo, texto){ const m = $('gateMsg'); m.innerHTML = (titulo ? '<b>' + escH(titulo) + '</b>' : '') + escH(texto || ''); m.hidden = false; }
   const GATE_BTN = $('gateLogin').innerHTML;
-  function gateBusy(on){ const b = $('gateLogin'); b.disabled = on; b.innerHTML = on ? '<span class="gate-spin" aria-hidden="true"></span><span>Ingresando…</span>' : GATE_BTN; }
+  function gateBusy(on){ const b = $('gateLogin'); b.disabled = on; b.innerHTML = on ? '<span class="gate-spin" aria-hidden="true"></span><span>Ingresando…</span>' : GATE_BTN; if (!on && gisListo) cubrir(b); }
   $('gateLogin').addEventListener('click', () => { gateBusy(true); $('gateMsg').hidden = true; login().finally(() => setTimeout(() => gateBusy(false), 6000)); });
   const NO_HAB = 'no tiene acceso a Perfu Cart. Pedile acceso a quien te compartió la app y, cuando te habilite, volvé a ingresar.';
   async function noAutorizado(email){
@@ -2948,6 +2952,40 @@
     const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/#listas' } });
     if (error) { $('loginErr').textContent = 'No se pudo ingresar. Probá de nuevo.'; $('loginErr').hidden = false; }
   }
+  // Ingreso con el botón de Google dentro de la página: Google muestra la dirección de la app
+  // (no la de la base de datos). Si no carga, el botón usa el ingreso de siempre.
+  const GOOGLE_CLIENT = '77374500306-i8oj0v1u5grn4sb9f4t89qr2liiah0sk.apps.googleusercontent.com';
+  let gisNonce = '', gisListo = false;
+  const sha256hex = async s => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map(x => x.toString(16).padStart(2, '0')).join('');
+  async function nuevoNonce(){
+    gisNonce = Array.from(crypto.getRandomValues(new Uint8Array(24)), x => x.toString(16).padStart(2, '0')).join('');
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, nonce: await sha256hex(gisNonce), callback: conGoogle, ux_mode: 'popup', auto_select: false, itp_support: true, use_fedcm_for_button: true });
+  }
+  async function conGoogle(resp){
+    gateBusy(true); $('gateMsg').hidden = true;
+    const { error } = await sb.auth.signInWithIdToken({ provider: 'google', token: resp.credential, nonce: gisNonce });
+    await nuevoNonce();
+    if (error) { gateBusy(false); gateMsg('No se pudo completar el ingreso', 'Tocá Ingresar de nuevo.'); return; }
+    if (location.hash === '#inicio' || !location.hash) go('listas');
+  }
+  // El botón real de Google queda invisible encima del nuestro, del mismo tamaño
+  function cubrir(btn){
+    if (!btn || btn.querySelector('.gis-ov')) return;
+    const ov = document.createElement('div'); ov.className = 'gis-ov'; ov.setAttribute('aria-hidden', 'true');
+    const inner = document.createElement('div'); ov.appendChild(inner); btn.appendChild(ov);
+    google.accounts.id.renderButton(inner, { type: 'standard', size: 'large', width: 320, text: 'continue_with' });
+    const ajustar = () => {
+      const w = btn.offsetWidth, h = btn.offsetHeight, iw = inner.offsetWidth || 320, ih = inner.offsetHeight || 44;
+      if (w && h) inner.style.transform = `scale(${w / iw}, ${h / ih})`;
+    };
+    try { new ResizeObserver(ajustar).observe(btn); } catch(_) {}
+    setTimeout(ajustar, 600); setTimeout(ajustar, 2000);
+  }
+  async function initGis(){
+    if (gisListo || !sb || !(window.google && google.accounts && google.accounts.id) || !(window.crypto && crypto.subtle)) return;
+    try { await nuevoNonce(); gisListo = true; ['gateLogin'].map($).concat([...document.querySelectorAll('[data-login]')]).forEach(cubrir); } catch(_) {}
+  }
+  (function esperarGis(n){ if (window.google && google.accounts && google.accounts.id && sb) initGis(); else if (n < 40) setTimeout(() => esperarGis(n + 1), 250); })(0);
   async function logout(){
     if (!confirm('¿Cerrar sesión? Tus listas quedan guardadas en tu cuenta.')) return;
     await subirListas();
