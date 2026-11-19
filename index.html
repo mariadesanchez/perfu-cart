@@ -2959,7 +2959,7 @@
   const sha256hex = async s => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map(x => x.toString(16).padStart(2, '0')).join('');
   async function nuevoNonce(){
     gisNonce = Array.from(crypto.getRandomValues(new Uint8Array(24)), x => x.toString(16).padStart(2, '0')).join('');
-    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, nonce: await sha256hex(gisNonce), callback: conGoogle, ux_mode: 'popup', auto_select: false, itp_support: true, use_fedcm_for_button: true });
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT, nonce: await sha256hex(gisNonce), callback: conGoogle, ux_mode: 'popup', auto_select: false, itp_support: true, use_fedcm_for_button: false, use_fedcm_for_prompt: false });
   }
   async function conGoogle(resp){
     gateBusy(true); $('gateMsg').hidden = true;
