@@ -335,7 +335,12 @@
   .buy .btn{width:100%}
   .buy .hint{margin:0}
   .buy .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45}
-  .opt .pasar{width:100%;margin:4px 0 10px;padding:9px 12px;font-size:15px}
+  .opt .enviar{margin-top:12px}
+  .listos{margin-top:14px;display:grid;gap:10px}
+  .listos>b{font-family:var(--display);font-size:17px}
+  .listos>span{font-size:14px;color:var(--muted);margin-top:-6px}
+  .listos .abrir{text-align:center;text-decoration:none;display:block}
+  .listos .hint{margin:-4px 0 2px}
   .opt .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45;margin:0 0 10px}
   .opt .note b{display:block;margin-bottom:4px}
   .opt .note a{display:flex;justify-content:space-between;gap:10px;padding:7px 0;color:var(--ink);text-decoration:none;border-top:1px dashed var(--line)}
@@ -1118,6 +1123,41 @@
     });
     return d;
   }
+  // Un solo envío: arma los carritos en todas las tiendas y deja un enlace por tienda para abrirlo y pagar
+  async function enviarTodo(grupos, btn){
+    const prev = btn.nextElementSibling; if (prev && prev.classList.contains('listos')) prev.remove();
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Armando los carritos…';
+    const res = await Promise.all(grupos.map(async ({ k, items }) => {
+      await Promise.all(items.map(it => completarDatos(k, it)));
+      if (SIN_CARRO[k]) return { k, items, manual: true };
+      const ok = items.filter(it => it.sku), faltan = items.filter(it => !it.sku);
+      if (!ok.length) return { k, items, faltan, manual: true };
+      const pedido = ok.map(it => ({ sku: it.sku, qty: it.qty, seller: it.seller || '1' }));
+      let url = '';
+      try {
+        const r = await fetch('/api/armar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tienda: k, items: pedido }) });
+        const d = await r.json(); if (d.ok) url = d.url;
+      } catch(_) {}
+      // si el servidor no pudo, el enlace carga los productos al abrirlo
+      if (!url) url = TIENDA_HOST[k] + '/checkout/cart/add?' + pedido.map(p => 'sku=' + encodeURIComponent(p.sku) + '&qty=' + Math.max(1, Math.ceil(p.qty)) + '&seller=' + encodeURIComponent(p.seller)).join('&') + '&redirect=true';
+      return { k, items, ok, faltan, url };
+    }));
+    btn.disabled = false; btn.textContent = 'Volver a enviar';
+    const box = document.createElement('div'); box.className = 'listos';
+    box.innerHTML = '<b>¡Listo! Tus carritos ya están armados.</b><span>Abrí cada uno, ingresá con tu cuenta de la tienda, elegí envío o retiro y pagá.</span>';
+    res.forEach(r => {
+      const n = SUPERS[r.k];
+      if (r.manual) { box.appendChild(notaProductos(n + ' no permite armar el carrito desde otra página. Agregá estos productos desde la tienda:', r.items, r.k)); return; }
+      const a = document.createElement('a'); a.className = 'btn btn-primary w100 abrir'; a.href = r.url; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = 'Abrir carrito de ' + n + ' (' + r.ok.length + ') ›';
+      box.appendChild(a);
+      if (VA_A_PORTADA[r.k]) { const s = document.createElement('div'); s.className = 'hint'; s.textContent = n + ' abre su página de inicio: tocá Carrito para ver tus productos.'; box.appendChild(s); }
+      if (r.faltan.length) box.appendChild(notaProductos('Estos no se pudieron pasar a ' + n + '. Agregalos desde la tienda:', r.faltan, r.k));
+    });
+    btn.after(box);
+    toast('Carritos armados');
+  }
+
   async function exportarCarrito(n, btn, lista){
     const k = superKey()[n], host = TIENDA_HOST[k];
     const items = lista || cart.filter(it => groupOf(it) === n);
@@ -1938,11 +1978,11 @@
         d.appendChild(ln);
       });
       o1.appendChild(d);
-      const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn btn-ghost pasar';
-      pb.textContent = (SIN_CARRO[k] ? 'Comprar en ' : 'Pasar a ') + SUPERS[k] + ' ›';
-      pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, g.lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }))));
-      o1.appendChild(pb);
     });
+    const env = document.createElement('button'); env.type = 'button'; env.className = 'btn btn-primary w100 enviar';
+    env.textContent = combo.size > 1 ? 'Enviar a las ' + combo.size + ' tiendas' : 'Enviar a ' + SUPERS[[...combo.keys()][0]];
+    env.addEventListener('click', () => enviarTodo([...combo.entries()].map(([k, g]) => ({ k, items: g.lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' })) })), env));
+    o1.appendChild(env);
     box.appendChild(o1);
 
 
