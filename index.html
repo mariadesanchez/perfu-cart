@@ -1089,7 +1089,9 @@
   // ---------- pasar el carrito a la tienda para pagar ----------
   const superKey = () => Object.fromEntries(Object.entries(SUPERS).map(([k, v]) => [v, k]));
   // Estas tiendas no aceptan un carrito armado desde otra página: se muestran los productos con su enlace
-  const SIN_CARRO = { gpsfarma: 1, farmacity: 1, simplicity: 1 };
+  const SIN_CARRO = { gpsfarma: 1 };
+  // Cargan el carrito pero después muestran su portada: hay que tocar Carrito
+  const VA_A_PORTADA = { farmacity: 1, simplicity: 1 };
   const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', gpsfarma: 'https://gpsfarma.com' };
   function renderBuy(groups){
     const bx = $('buyBox'); bx.innerHTML = '';
@@ -1153,6 +1155,13 @@
     if (w) { try { w.opener = null; } catch(_) {} w.location.href = url; } else location.href = url;
     toast(ok.length === 1 ? 'Abrí el carrito de ' + n : 'Pasé ' + ok.length + ' productos a ' + n);
     if (faltan.length) btn.after(notaProductos('Estos no se pudieron pasar solos. Agregalos desde la tienda:', faltan, k));
+    if (VA_A_PORTADA[k]) {
+      const d = document.createElement('div'); d.className = 'note';
+      d.innerHTML = '<b></b><span></span>';
+      d.children[0].textContent = 'Listo, tus productos ya están en ' + n + '.';
+      d.children[1].textContent = n + ' abre su página de inicio: tocá Carrito para verlos, elegir envío o retiro y pagar.';
+      btn.after(d);
+    }
   }
 
   function listText(){
