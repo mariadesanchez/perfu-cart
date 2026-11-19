@@ -335,6 +335,7 @@
   .buy .btn{width:100%}
   .buy .hint{margin:0}
   .buy .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45}
+  .opt details.solo-total>summary{text-align:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
   .opt .pasar{width:100%;margin:4px 0 10px;padding:12px;font-size:16px;font-weight:800;border:0;color:#fff;background:linear-gradient(180deg,#4DB2FF 0%,var(--accent) 100%);box-shadow:0 4px 0 var(--accent-deep), 0 10px 18px -10px rgba(0,0,0,.4)}
   .opt .pasar.rosa{background:linear-gradient(180deg,#FF5A9A 0%,var(--grape) 100%);box-shadow:0 4px 0 var(--grape-deep), 0 10px 18px -10px rgba(0,0,0,.4)}
   .opt .pasar:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-deep)}
@@ -1932,7 +1933,8 @@
     [...combo.entries()].sort((a, b) => b[1].total - a[1].total).forEach(([k, g]) => {
       const d = document.createElement('details');
       d.innerHTML = `<summary></summary>`;
-      d.querySelector('summary').textContent = `Carrito ${SUPERS[k]} · ${g.lines.length} · ${fmt(g.total)}`;
+      d.querySelector('summary').textContent = fmt(g.total);
+      d.classList.add('solo-total');
       g.lines.forEach(x => {
         const ln = document.createElement('div'); ln.className = 'ln';
         ln.innerHTML = '<span></span><span></span>';
