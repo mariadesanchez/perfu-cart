@@ -334,6 +334,11 @@
   .buy .btn{width:100%}
   .buy .hint{margin:0}
   .buy .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45}
+  .opt .pasar{width:100%;margin:4px 0 10px;padding:9px 12px;font-size:15px}
+  .opt .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45;margin:0 0 10px}
+  .opt .note b{display:block;margin-bottom:4px}
+  .opt .note a{display:flex;justify-content:space-between;gap:10px;padding:7px 0;color:var(--ink);text-decoration:none;border-top:1px dashed var(--line)}
+  .opt .note a span:last-child{color:var(--accent-deep);font-weight:700;white-space:nowrap}
   .buy .note b{display:block;margin-bottom:4px}
   .buy .note a{display:flex;justify-content:space-between;gap:10px;padding:7px 0;color:var(--ink);text-decoration:none;border-top:1px dashed var(--line)}
   .buy .note a span:last-child{color:var(--accent-deep);font-weight:700;white-space:nowrap}
@@ -1123,10 +1128,10 @@
     });
     return d;
   }
-  async function exportarCarrito(n, btn){
+  async function exportarCarrito(n, btn, lista){
     const k = superKey()[n], host = TIENDA_HOST[k];
-    const items = cart.filter(it => groupOf(it) === n);
-    const bx = $('buyBox'); bx.querySelectorAll('.note').forEach(x => x.remove());
+    const items = lista || cart.filter(it => groupOf(it) === n);
+    const nx = btn.nextElementSibling; if (nx && nx.classList.contains('note')) nx.remove();
     // la pestaña se abre ya, con el toque, para que el navegador no la bloquee
     const w = SIN_CARRO[k] ? null : window.open('', '_blank');
     const old = btn.textContent; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Preparando el carrito…';
@@ -1936,23 +1941,16 @@
         d.appendChild(ln);
       });
       o1.appendChild(d);
+      const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn btn-ghost pasar';
+      pb.textContent = (SIN_CARRO[k] ? 'Comprar en ' : 'Pasar a ') + SUPERS[k] + ' ›';
+      pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, g.lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }))));
+      o1.appendChild(pb);
     });
     const b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'btn btn-primary'; b1.textContent = 'Armar estos carritos';
     b1.addEventListener('click', () => applyPlan([...combo.entries()].flatMap(([k, g]) => g.lines.map(x => ({ k, ...x })))));
     o1.appendChild(b1);
     box.appendChild(o1);
 
-    const o2 = document.createElement('div'); o2.className = 'opt';
-    o2.innerHTML = '<h4><span>Todo en una tienda</span><span></span></h4><div class="os">Total de lo que encontré en cada uno.</div>';
-    singles.forEach(s => {
-      const row = document.createElement('div'); row.className = 'rank';
-      row.innerHTML = `<div class="rn"><b></b><small></small></div><div class="rt">${fmt(s.total)}</div><button type="button" class="btn btn-ghost">Armar</button>`;
-      row.querySelector('b').textContent = SUPERS[s.k];
-      row.querySelector('small').textContent = s.miss.length ? `${s.found}/${l.items.length} · falta: ${s.miss.map(m => m.name).slice(0, 3).join(', ')}${s.miss.length > 3 ? '…' : ''}` : `${s.found}/${l.items.length} · tiene todo`;
-      row.querySelector('.btn').addEventListener('click', () => applyPlan(s.lines.map(x => ({ k: s.k, ...x }))));
-      o2.appendChild(row);
-    });
-    box.appendChild(o2);
 
     // Ofertas que no se aprovechan porque la cantidad no alcanza
     const opps = [];
