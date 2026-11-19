@@ -329,6 +329,7 @@
   #cartTabs button small{font-weight:600;opacity:.8;margin-left:4px;font-variant-numeric:tabular-nums}
   .totals .bySuper{display:block;margin-top:10px;padding-top:8px;border-top:1.5px dashed var(--line)}
   .totals .bySuper[hidden]{display:none}
+  #tagBox[hidden],#minibar,#saveCartAsList{display:none!important}
   .buy{display:grid;gap:10px;margin:16px 0 6px}
   .buy[hidden]{display:none}
   .buy .btn{width:100%}
@@ -534,7 +535,7 @@
       <div class="gate-msg" id="gateMsg" role="status" hidden></div>
       <div class="gate-links"><a href="/privacidad">Privacidad</a> · <a href="/terminos">Condiciones</a></div>
     </div>
-    <div class="tag" id="tagBox">
+    <div class="tag" id="tagBox" hidden>
       <svg class="tag-cart" viewBox="0 0 64 64" aria-hidden="true">
         <path d="M6 10h8l7 30h30l6-22H18" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M22 30h31" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".55"/>
@@ -696,7 +697,7 @@
     <div id="lists"></div>
   </section>
 
-  <section class="receipt" id="cart" data-view="ticket">
+  <section class="receipt" id="cart" data-view="ticket" data-off="1">
     <h2 id="cartTitle">Tu ticket</h2>
     <div class="seg" id="cartTabs" hidden></div>
     <ul class="list" id="list"></ul>
@@ -816,9 +817,6 @@
   <button type="button" data-go="listas" aria-label="Listas">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>
     <span>Listas</span><b class="tab-badge" id="tabListas">0</b></button>
-  <button type="button" data-go="ticket" aria-label="Ticket">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h11.2L21 7H6.2"/><circle cx="9" cy="19.5" r="1.6"/><circle cx="17" cy="19.5" r="1.6"/></svg>
-    <span>Ticket</span><b class="tab-badge" id="tabBadge">0</b></button>
   <button type="button" data-go="cuenta" aria-label="Mi cuenta">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
     <span>Mi cuenta</span></button>
@@ -828,7 +826,7 @@
   <div class="sheet-bg" id="sheetBg"></div>
   <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet-grab"></div>
-    <h2><span id="sheetTitle">Agregar al carrito</span><button type="button" class="xbtn" id="sheetClose" aria-label="Cerrar">✕</button></h2>
+    <h2><span id="sheetTitle">Agregar a tu lista</span><button type="button" class="xbtn" id="sheetClose" aria-label="Cerrar">✕</button></h2>
     <form id="addForm" autocomplete="off">
       <div class="ean" id="eanRow">Código <b id="eanVal"></b><button type="button" id="eanClear">quitar</button></div>
       <label for="name">Producto</label>
@@ -851,7 +849,7 @@
       <div class="last" id="lastPrice"></div>
       <div class="promoBox" id="promoBox" hidden></div>
       <div class="subtotal"><span>Subtotal</span><b id="subtotal">$ 0</b></div>
-      <button class="btn btn-primary w100" type="submit" style="margin-top:14px;font-size:16px;padding:15px">Agregar al carrito</button>
+      <button class="btn btn-primary w100" type="submit" style="margin-top:14px;font-size:16px;padding:15px">Agregar a tu lista</button>
       <div class="hint">Para productos por peso, poné los kilos en cantidad (por ejemplo 0,75).</div>
     </form>
   </div>
@@ -931,7 +929,7 @@
 
   function openSheet(){
     const sh = $('addSheet'); sh.hidden = false; document.body.style.overflow = 'hidden';
-    $('sheetTitle').textContent = curSuper ? 'Agregar al carrito ' + curSuper : 'Agregar al carrito';
+    $('sheetTitle').textContent = 'Agregar a ' + ((lists.find(l => l.id === bListId) || lists[0] || {}).name || 'tu lista');
   }
   function closeSheet(){ $('addSheet').hidden = true; document.body.style.overflow = ''; }
   $('sheetClose').addEventListener('click', () => { closeSheet(); resetForm(); setStatus(''); });
@@ -950,23 +948,13 @@
     const qty = num($('qty').value);
     if (price <= 0) { setStatus('Ingresá el precio.', 'err'); $('price').focus(); return; }
     if (qty <= 0) { setStatus('La cantidad tiene que ser mayor a 0.', 'err'); return; }
-    if (currentEan) {
-      catalog[currentEan] = { name, price, date: new Date().toISOString() };
-      saveCat(); renderCat();
-      const existing = cart.find(x => x.ean === currentEan && (x.super || '') === (curSuper || ''));
-      if (existing) {
-        existing.qty = Math.round((existing.qty + qty)*1000)/1000; existing.price = price; existing.name = name;
-        cart = [existing, ...cart.filter(x => x !== existing)];
-        if (cartView !== 'all') cartView = groupOf(existing);
-        saveCart(); render(); resetForm(); setStatus('');
-        closeSheet(); toast('Sumado: ' + name + ' (x' + fmtQ(existing.qty) + ')'); return;
-      }
-    }
-    const promoTag = promoState && promoState.mode === 'promo' ? (promoState.p.promo || 'oferta') : '';
-    cart.unshift({ id: Date.now() + Math.random(), ean: currentEan, name, price, qty, promo: promoTag, super: curSuper || '' });
-    if (cartView !== 'all') cartView = groupOf(cart[0]);
-    saveCart(); render(); resetForm(); setStatus(''); closeSheet();
-    toast('Agregado al carrito ' + (cart[0].super || '') + ': ' + name);
+    if (currentEan) { catalog[currentEan] = { name, price, date: new Date().toISOString() }; saveCat(); renderCat(); }
+    const l = ensureList();
+    const ex = currentEan && l.items.find(i => i.ean === currentEan);
+    if (ex) { ex.qty = Math.round((ex.qty + qty) * 1000) / 1000; ex.price = price; }
+    else l.items.push({ id: uid(), name, ean: currentEan || '', qty, price });
+    saveLists(); renderLists(); renderBuilder(); resetForm(); setStatus(''); closeSheet();
+    toast((ex ? 'Sumado a ' : 'Agregado a ') + l.name + ': ' + name);
   });
 
   // ---------- cart ----------
@@ -1955,9 +1943,6 @@
       pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, g.lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }))));
       o1.appendChild(pb);
     });
-    const b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'btn btn-primary'; b1.textContent = 'Armar estos carritos';
-    b1.addEventListener('click', () => applyPlan([...combo.entries()].flatMap(([k, g]) => g.lines.map(x => ({ k, ...x })))));
-    o1.appendChild(b1);
     box.appendChild(o1);
 
 
@@ -2452,8 +2437,8 @@
   } catch(_) {}
 
   // ---------- navegación por pestañas ----------
-  const VIEWS = ['inicio', 'ofertas', 'listas', 'ticket', 'cuenta'];
-  const ALIAS = { mas: 'cuenta', avisos: 'cuenta', lista: 'listas', comparar: 'inicio' };
+  const VIEWS = ['inicio', 'ofertas', 'listas', 'cuenta'];
+  const ALIAS = { mas: 'cuenta', avisos: 'cuenta', lista: 'listas', ticket: 'listas', comparar: 'inicio' };
   let view = 'inicio';
   function showView(v, opts){
     v = ALIAS[v] || v;
