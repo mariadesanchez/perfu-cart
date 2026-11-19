@@ -335,7 +335,10 @@
   .buy .btn{width:100%}
   .buy .hint{margin:0}
   .buy .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45}
-  .opt .pasar{width:100%;margin:4px 0 10px;padding:9px 12px;font-size:15px}
+  .opt .pasar{width:100%;margin:4px 0 10px;padding:11px 12px;font-size:15px;font-weight:700;border:0;background:#DCEFFF;color:#0A5DA6;box-shadow:0 3px 0 #B5DBFA}
+  .opt .pasar.rosa{background:#FFE1EE;color:#B3175A;box-shadow:0 3px 0 #F7BCD5}
+  .opt .pasar:active{transform:translateY(2px);box-shadow:none}
+  @media (prefers-color-scheme: dark){ .opt .pasar{background:#173A5A;color:#BFE3FF;box-shadow:0 3px 0 #0E2740} .opt .pasar.rosa{background:#4A1830;color:#FFD0E3;box-shadow:0 3px 0 #2E0E1E} }
   .opt .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45;margin:0 0 10px}
   .opt .note b{display:block;margin-bottom:4px}
   .opt .note a{display:flex;justify-content:space-between;gap:10px;padding:7px 0;color:var(--ink);text-decoration:none;border-top:1px dashed var(--line)}
@@ -1938,8 +1941,9 @@
         d.appendChild(ln);
       });
       o1.appendChild(d);
-      const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn btn-ghost pasar';
-      pb.textContent = (SIN_CARRO[k] ? 'Comprar en ' : 'Pasar a ') + SUPERS[k] + ' ›';
+      const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn pasar' + (o1.querySelectorAll('.pasar').length % 2 ? ' rosa' : '');
+      const cant = g.lines.length + (g.lines.length === 1 ? ' producto' : ' productos');
+      pb.textContent = SIN_CARRO[k] ? 'Ver ' + cant + ' en ' + SUPERS[k] + ' ›' : 'Pasar ' + cant + ' a ' + SUPERS[k] + ' ›';
       pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, g.lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }))));
       o1.appendChild(pb);
     });
