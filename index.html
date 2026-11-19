@@ -1083,6 +1083,8 @@
 
   // ---------- pasar el carrito a la tienda para pagar ----------
   const superKey = () => Object.fromEntries(Object.entries(SUPERS).map(([k, v]) => [v, k]));
+  // Estas tiendas no aceptan un carrito armado desde otra página: se muestran los productos con su enlace
+  const SIN_CARRO = { gpsfarma: 1, farmacity: 1, simplicity: 1 };
   const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', gpsfarma: 'https://gpsfarma.com' };
   function renderBuy(groups){
     const bx = $('buyBox'); bx.innerHTML = '';
@@ -1094,13 +1096,13 @@
     bx.appendChild(h);
     names.forEach(n => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-primary';
-      b.textContent = 'Pagar en ' + n + ' ›';
+      b.textContent = (SIN_CARRO[superKey()[n]] ? 'Comprar en ' : 'Pagar en ') + n + ' ›';
       b.addEventListener('click', () => exportarCarrito(n, b));
       bx.appendChild(b);
     });
   }
   async function completarDatos(k, it){
-    if (k === 'gpsfarma' ? it.link : it.sku) return;
+    if (SIN_CARRO[k] ? it.link : it.sku) return;
     if (!it.ean) return;
     try {
       const r = await fetch('/api/vtex?tienda=' + k + '&ean=' + encodeURIComponent(it.ean) + '&limite=5');
@@ -1126,13 +1128,13 @@
     const items = cart.filter(it => groupOf(it) === n);
     const bx = $('buyBox'); bx.querySelectorAll('.note').forEach(x => x.remove());
     // la pestaña se abre ya, con el toque, para que el navegador no la bloquee
-    const w = k === 'gpsfarma' ? null : window.open('', '_blank');
+    const w = SIN_CARRO[k] ? null : window.open('', '_blank');
     const old = btn.textContent; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Preparando el carrito…';
     await Promise.all(items.map(it => completarDatos(k, it)));
     saveCart();
     btn.disabled = false; btn.textContent = old;
-    if (k === 'gpsfarma') {
-      btn.after(notaProductos('GPS Farma no permite cargar el carrito desde otra página. Abrí cada producto y agregalo; el envío a la farmacia que elijas se elige al pagar.', items, k));
+    if (SIN_CARRO[k]) {
+      btn.after(notaProductos(n + ' no permite cargar el carrito desde otra página. Abrí cada producto y agregalo; el envío o el retiro se eligen al pagar.', items, k));
       return;
     }
     const ok = items.filter(it => it.sku), faltan = items.filter(it => !it.sku);
