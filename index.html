@@ -394,6 +394,12 @@
   .grp-h span{display:flex;flex-direction:column;min-width:0}
   .grp-h b{font-size:16px}
   .grp-h small{color:var(--muted);font-size:14px;font-weight:700}
+  .opt .grp .ln{display:grid;grid-template-columns:34px 1fr auto;grid-template-areas:"img n n" "img s p";align-items:center;gap:2px 10px;padding:6px 0}
+  .opt .grp .ln .pthumb{grid-area:img}
+  .opt .ln .lnn{grid-area:n;min-width:0;font-size:14px}
+  .opt .ln .mini-step{grid-area:s}
+  .opt .ln .lnp{grid-area:p;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:14px}
+  .opt .ln .mini-step button{width:26px;height:26px}
   .grp.solo{margin-top:6px;padding-top:0;border-top:0}
   .grp.solo .grp-h span{display:block;color:var(--muted);font-size:14px}
   .opt .pasar{flex:none;width:auto;margin:0;padding:8px 12px;font-size:14px;font-weight:800;border:0;color:#fff;background:linear-gradient(180deg,#4DB2FF 0%,var(--accent) 100%);box-shadow:0 3px 0 var(--accent-deep)}
@@ -2102,9 +2108,15 @@
         hd.appendChild(pb); d.appendChild(hd);
         g.lines.forEach(x => {
           const ln = document.createElement('div'); ln.className = 'ln';
-          ln.innerHTML = '<span></span><span></span>';
-          ln.children[0].textContent = `${fmtQ(x.it.qty)} × ${x.p.nombre}`;
-          ln.children[1].textContent = fmt(x.u * x.it.qty);
+          ln.innerHTML = `<span class="lnn"></span><div class="mini-step"><button type="button" data-d="-1" aria-label="Menos">−</button><b>${fmtQ(x.it.qty)}</b><button type="button" data-d="1" aria-label="Más">+</button></div><span class="lnp"></span>`;
+          ln.querySelector('.lnn').textContent = x.p.nombre;
+          ln.querySelector('.lnp').textContent = fmt(x.u * x.it.qty);
+          ln.querySelectorAll('.mini-step button').forEach(bt => bt.addEventListener('click', () => {
+            const nq = Math.max(1, Math.round((x.it.qty + Number(bt.dataset.d)) * 1000) / 1000);
+            if (nq === x.it.qty) return;
+            x.it.qty = nq; saveLists(); renderLists(); if (view === 'listas') renderBuilderItems();
+            const y = window.scrollY; renderPlan(l, box, res); window.scrollTo(0, y);
+          }));
           ln.prepend(fotoMini(x.p.imagen || x.it.img, 'pthumb'));
           d.appendChild(ln);
         });
