@@ -389,6 +389,10 @@
   .opt.incompleta h4 span:last-child{color:var(--muted)}
   .opt details>summary{font-size:14px;color:var(--muted);text-align:left;margin:6px 0 4px}
   .opts-t{margin-top:14px}
+  /* botón de cada tienda: carrito + nombre, del color de la tienda */
+  .opt .grp .pasar,.opt .grp .pasar.rosa{display:inline-flex;align-items:center;gap:6px;background:var(--tc)!important;color:#fff;box-shadow:0 3px 0 color-mix(in srgb, var(--tc) 70%, #000)!important}
+  .opt .grp .pasar svg{width:18px;height:18px;flex:none}
+  .opt .grp .pasar:active{box-shadow:0 1px 0 color-mix(in srgb, var(--tc) 70%, #000)!important}
   /* el carrito más conveniente: resumen arriba y una tarjeta por tienda */
   .opt.multi{background:none!important;border:0!important;padding:0!important;box-shadow:none!important}
   .opt.multi .resumen{background:color-mix(in srgb, var(--tag) 16%, var(--card));border:2px solid var(--tag);border-radius:18px;padding:14px 16px}
@@ -1266,10 +1270,10 @@
     const nx = ancla.nextElementSibling; if (nx && nx.classList.contains('note')) nx.remove();
     // la pestaña se abre ya, con el toque, para que el navegador no la bloquee
     const w = SIN_CARRO[k] ? null : window.open('', '_blank');
-    const old = btn.textContent; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Preparando el carrito…';
+    const old = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Preparando el carrito…';
     await Promise.all(items.map(it => completarDatos(k, it)));
     saveCart();
-    btn.disabled = false; btn.textContent = old;
+    btn.disabled = false; btn.innerHTML = old;
     if (SIN_CARRO[k]) {
       ancla.after(notaProductos(n + ' no permite cargar el carrito desde otra página. Abrí cada producto y agregalo; el envío o el retiro se eligen al pagar.', items, k));
       return;
@@ -2194,7 +2198,9 @@
         else { hd.querySelector('span').replaceChildren(...o.querySelector('.os').childNodes); o.querySelector('.os').remove(); d.classList.add('solo'); }
         const pb = document.createElement('button'); pb.type = 'button';
         pb.className = 'btn pasar' + ((box.querySelectorAll('.pasar').length + o.querySelectorAll('.pasar').length) % 2 ? ' rosa' : '');
-        pb.textContent = 'Ir a ' + SUPERS[k] + ' (' + g.lines.length + ') ›';
+        pb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 4h2.2l2.3 10.2a1.6 1.6 0 0 0 1.6 1.3h7.7a1.6 1.6 0 0 0 1.6-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.4" fill="currentColor"/><circle cx="16.5" cy="19.5" r="1.4" fill="currentColor"/></svg><span></span>';
+        pb.querySelector('span').textContent = SUPERS[k] + ' (' + g.lines.length + ') ›';
+        pb.setAttribute('aria-label', 'Ir al carrito de ' + SUPERS[k] + ', ' + g.lines.length + (g.lines.length === 1 ? ' producto' : ' productos'));
         pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, aItems(g.lines)));
         if (op.faltantes && op.faltantes.length) {
           const acts = document.createElement('div'); acts.className = 'grp-acts';
