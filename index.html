@@ -2048,7 +2048,7 @@
     const combo = new Map(); const missing = []; let comboTotal = 0;
     l.items.forEach(it => {
       let best = null;
-      keys.forEach(k => { const p = res[it.id][k]; if (!p) return; const u = unitFor(p, it.qty); if (!best || u < best.u) best = { k, p, u }; });
+      keys.forEach(k => { const p = res[it.id][k]; if (!p) return; const u = unitFor(p, it.qty); if (!(u > 0)) return; if (!best || u < best.u) best = { k, p, u }; });
       if (!best) { missing.push(it); return; }
       const g = combo.get(best.k) || { lines: [], total: 0 };
       g.lines.push({ it, p: best.p, u: best.u }); g.total += best.u * it.qty; combo.set(best.k, g);
@@ -2057,7 +2057,7 @@
     // Opción todo en un súper
     const singles = keys.map(k => {
       let total = 0, found = 0; const lines = [], miss = [];
-      l.items.forEach(it => { const p = res[it.id][k]; if (!p) { miss.push(it); return; } const u = unitFor(p, it.qty); total += u * it.qty; found++; lines.push({ it, p, u }); });
+      l.items.forEach(it => { const p = res[it.id][k]; const u = p ? unitFor(p, it.qty) : 0; if (!p || !(u > 0)) { miss.push(it); return; } total += u * it.qty; found++; lines.push({ it, p, u }); });
       return { k, total, found, lines, miss };
     }).filter(s => s.found).sort((a, b) => (b.found - a.found) || (a.total - b.total));
     const found = l.items.length - missing.length;
