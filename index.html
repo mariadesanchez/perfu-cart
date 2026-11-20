@@ -389,6 +389,14 @@
   .opt.incompleta h4 span:last-child{color:var(--muted)}
   .opt details>summary{font-size:14px;color:var(--muted);text-align:left;margin:6px 0 4px}
   .opts-t{margin-top:14px}
+  .uno-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:8px 0 12px}
+  .uno-chip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-align:left;font:inherit}
+  .uno-chip b{font-size:15px}
+  .uno-chip span{font-size:13px;color:var(--muted);font-weight:700}
+  .uno-chip.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent) inset}
+  .uno-chip[disabled]{opacity:.45;cursor:default}
+  #builder.con-plan:not(.lista-abierta) #bListTitle,#builder.con-plan:not(.lista-abierta) #bItems,#builder.con-plan:not(.lista-abierta) #bSum{display:none}
+  .ver-lista{margin-top:12px}
   .grp{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
   .grp-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
   .grp-h span{display:flex;flex-direction:column;min-width:0}
@@ -1512,6 +1520,7 @@
       const s = listTotals(l);
       toast('Agregado a ' + l.name + ' · ' + s.n + (s.n === 1 ? ' producto' : ' productos'));
     }
+    $('bPlan').hidden = true; $('bPlan').innerHTML = ''; $('builder').classList.remove('con-plan', 'lista-abierta');
     saveLists(); renderLists(); if (view === 'listas') renderBuilder();
   }
   function searchCard(g){
@@ -1958,7 +1967,7 @@
     confirmBox('¿Eliminar la lista “' + l.name + '”?', `Se borran sus ${l.items.length} productos de este dispositivo. No se puede deshacer.`, 'Eliminar', () => {
       lists = lists.filter(x => x.id !== l.id); saveLists();
       if (bListId === l.id) bListId = null;
-      $('bPlan').hidden = true; $('bPlan').innerHTML = '';
+      $('bPlan').hidden = true; $('bPlan').innerHTML = ''; $('builder').classList.remove('con-plan', 'lista-abierta');
       renderLists(); if (!$('builder').hidden) renderBuilder();
       toast('Lista eliminada');
     });
@@ -2067,6 +2076,7 @@
     renderPlan(l, box, res);
   }
 
+  let planTienda = null;
   function renderPlan(l, box, res){
     const keys = Object.keys(SUPERS);
     // Opción combinada: cada producto en el súper más barato
@@ -2149,15 +2159,33 @@
       return o;
     }
     const nombres = arr => arr.map(it => it.name).join(', ');
-    const completas = singles.filter(s => s.found === found).map(s => ({ titulo: 'Todo en ' + SUPERS[s.k], total: s.total,
-      sub: 'Tiene tus ' + found + (found === 1 ? ' producto' : ' productos') + '.', grupos: [[s.k, { lines: s.lines, total: s.total }]] }));
-    if (combo.size > 1) completas.push({ titulo: 'Combinando ' + combo.size + ' tiendas', total: comboTotal,
-      sub: 'Cada producto en la tienda donde está más barato.', grupos: [...combo.entries()].sort((a, b) => b[1].total - a[1].total) });
-    completas.sort((a, b) => a.total - b.total);
-    const tit = document.createElement('div'); tit.className = 'sub opts-t';
-    tit.textContent = completas.length > 1 ? 'Tus opciones, de la más barata a la más cara' : 'Tu opción';
-    box.appendChild(tit);
-    completas.forEach((op, i) => box.appendChild(tarjetaOpcion(op, i)));
+    const PL = SUPERS.coto ? 'súper' : 'tiendas';
+    // 1) El carrito más conveniente
+    const mejor = { titulo: 'Tu carrito más conveniente', total: comboTotal, grupos: [...combo.entries()].sort((a, b) => b[1].total - a[1].total),
+      sub: combo.size > 1 ? 'Combinando ' + combo.size + ' ' + PL + ': cada producto donde está más barato.' : 'Todo en ' + SUPERS[[...combo.keys()][0]] + ' es lo más barato.' };
+    box.appendChild(tarjetaOpcion(mejor, 0));
+    // 2) Todo en un solo lugar: un botón por tienda; al tocarlo se despliega ese carrito
+    const unoTit = document.createElement('div'); unoTit.className = 'sub opts-t'; unoTit.textContent = '¿Querés comprar todo en un solo lugar?';
+    box.appendChild(unoTit);
+    const chips = document.createElement('div'); chips.className = 'uno-chips';
+    const ordenK = Object.keys(SUPERS).map(k => singles.find(s => s.k === k) || { k, total: 0, found: 0, lines: [], miss: l.items.slice() })
+      .sort((a, b) => (b.found === found) - (a.found === found) || b.found - a.found || a.total - b.total);
+    ordenK.forEach(s => {
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'uno-chip' + (planTienda === s.k ? ' on' : '');
+      c.innerHTML = '<b></b><span></span>';
+      c.children[0].textContent = SUPERS[s.k];
+      c.children[1].textContent = !s.found ? 'No tiene' : s.found === found ? fmt(s.total) : 'Tiene ' + s.found + ' de ' + found;
+      if (!s.found) c.disabled = true;
+      c.addEventListener('click', () => { planTienda = planTienda === s.k ? null : s.k; const y = window.scrollY; renderPlan(l, box, res); window.scrollTo(0, y); });
+      chips.appendChild(c);
+    });
+    box.appendChild(chips);
+    const sel = singles.find(s => s.k === planTienda);
+    if (sel) {
+      const falt = sel.miss.filter(it => !missing.includes(it));
+      box.appendChild(tarjetaOpcion({ titulo: 'Todo en ' + SUPERS[sel.k], total: sel.total, grupos: [[sel.k, { lines: sel.lines, total: sel.total }]],
+        sub: falt.length ? 'Tiene ' + sel.found + ' de ' + found + '. No tiene: ' + escH(nombres(falt)) + '.' : 'Tiene tus ' + found + (found === 1 ? ' producto.' : ' productos.') }, -1));
+    }
 
 
 
@@ -2169,6 +2197,16 @@
     const note = document.createElement('div'); note.className = 'hint';
     note.textContent = 'Las ofertas se aplican solo si la cantidad alcanza (ej. 3x2 llevando 3). Precios online; en el local pueden variar.';
     box.appendChild(note);
+
+    // Mientras se ven los resultados, la lista queda plegada para no mostrar los productos dos veces
+    if (box.id === 'bPlan') {
+      const bd = $('builder'); bd.classList.add('con-plan');
+      const tg = document.createElement('button'); tg.type = 'button'; tg.className = 'btn btn-ghost w100 ver-lista';
+      const txt = () => bd.classList.contains('lista-abierta') ? 'Ocultar mi lista ▴' : 'Ver y editar mi lista (' + l.items.length + ') ▾';
+      tg.textContent = txt();
+      tg.addEventListener('click', () => { bd.classList.toggle('lista-abierta'); tg.textContent = txt(); });
+      box.appendChild(tg);
+    }
   }
 
   function applyPlan(lines){
@@ -2196,7 +2234,7 @@
   $('lMenuBtn').addEventListener('click', () => { const m = $('lMenu'); m.hidden = !m.hidden; $('lMenuBtn').setAttribute('aria-expanded', String(!m.hidden)); });
   $('bAddMore').addEventListener('click', () => { go('inicio'); setTimeout(() => { $('prodCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('cotoQ').focus(); }, 300); });
   $('listBtn').addEventListener('click', openBuilder);
-  $('bList').addEventListener('change', () => { bListId = $('bList').value; cerrarMenuListas(); $('bPlan').hidden = true; $('bPlan').innerHTML = ''; renderBuilder(); });
+  $('bList').addEventListener('change', () => { bListId = $('bList').value; cerrarMenuListas(); $('bPlan').hidden = true; $('bPlan').innerHTML = ''; $('builder').classList.remove('con-plan', 'lista-abierta'); renderBuilder(); });
   $('bRename').addEventListener('click', () => {
     const f = $('bRenameForm'); f.hidden = !f.hidden;
     if (!f.hidden) { $('bRenameName').value = ensureList().name; $('bRenameName').focus(); $('bRenameName').select(); }
