@@ -393,8 +393,21 @@
   .ahorro-ln span{font-weight:700;color:#1F8A4C;font-size:14px}
   .ahorro-btn{border:0;border-radius:12px;padding:8px 12px;font:inherit;font-weight:800;font-size:14px;background:var(--ink);color:var(--card);cursor:pointer}
   .ah-list{display:grid;gap:10px;padding:6px 0}
+  .ah-lbl{font-size:13px;font-weight:800;color:var(--muted);margin-top:6px}
+  .ah-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+  .ah-chip{border:1.5px solid var(--line);border-left:4px solid var(--tc);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .ah-chip.on{background:var(--tc);border-color:var(--tc);color:#fff}
+  .ah-res{padding:10px 12px;border-radius:12px;background:var(--bg);font-size:14px;margin-bottom:10px}
+  .ah-res b{color:#1F8A4C}
+  .ah-sec{margin-top:12px}
+  .ah-sh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .ah-sh .av{width:30px;height:30px;border-radius:50%;background:var(--tc);color:#fff;display:grid;place-items:center;font-style:normal;font-weight:800;flex:none}
+  .ah-sh b{flex:1}
+  .ah-sh em{font-style:normal;font-weight:800;color:#1F8A4C;font-size:14px}
+  .ah-sec .ah-card{margin-bottom:8px}
   .ah-card{display:grid;grid-template-columns:44px 1fr;gap:4px 12px;padding:12px;border:1.5px solid var(--line);border-left:5px solid var(--tc);border-radius:14px}
   .ah-card .lthumb{grid-row:span 3}
+  .ah-sec .ah-card{border-left-width:1.5px}
   .ah-top{display:flex;flex-direction:column;gap:2px}
   .ah-n{font-weight:700;line-height:1.25}
   .ah-t{font-size:13px;font-weight:800;color:var(--tc)}
@@ -2266,56 +2279,92 @@
     const mejor = { titulo: 'Tu carrito más conveniente', total: comboTotal, grupos: [...combo.entries()].sort((a, b) => b[1].total - a[1].total),
       sub: combo.size > 1 ? 'Combinando ' + combo.size + ' ' + PL + ': cada producto donde está más barato.' : 'Todo en ' + SUPERS[[...combo.keys()][0]] + ' es lo más barato.' };
     box.appendChild(tarjetaOpcion(mejor, 0));
-    // ¿Vale la pena ir a varios súper? Ahorro frente a comprar todo en un solo lugar, producto por producto
+    // ¿Vale la pena ir a varios súper? Ahorro frente a comprar todo en uno (el más barato con todo, o el que elijas)
     if (combo.size > 1) {
-      const base = singles.filter(s => s.found === found).sort((a, b) => a.total - b.total)[0];
-      const filas = [];
-      combo.forEach((g, k) => g.lines.forEach(x => {
-        const enBase = base && base.lines.find(y => y.it.id === x.it.id);
-        const ahorro = enBase ? (enBase.u - x.u) * x.it.qty : 0;
-        const conOferta = !!(x.p.precio_promo && x.u < x.p.precio - 0.5);
-        if (ahorro > 0.5 || (!base && conOferta)) filas.push({ k, x, enBase, ahorro, conOferta });
-      }));
-      filas.sort((a, b) => b.ahorro - a.ahorro);
-      if (filas.length) {
+      const PLs = SUPERS.coto ? 'súper' : 'tiendas';
+      const completos = singles.filter(s => s.found === found).sort((a, b) => a.total - b.total);
+      const baseInicial = singles.find(s => s.k === planTienda) || completos[0] || null;
+      function filasVs(base){
+        const fs = [];
+        combo.forEach((g, k) => {
+          if (base && k === base.k) return;
+          g.lines.forEach(x => {
+            const eb = base && base.lines.find(y => y.it.id === x.it.id);
+            const conOferta = !!(x.p.precio_promo && x.u < x.p.precio - 0.5);
+            const ahorro = eb ? (eb.u - x.u) * x.it.qty : 0;
+            if (!base ? conOferta : (ahorro > 0.5 || !eb)) fs.push({ k, x, enBase: eb, ahorro, conOferta });
+          });
+        });
+        return fs;
+      }
+      const iniciales = filasVs(baseInicial);
+      if (iniciales.length) {
         const rs = box.querySelector('.opt.multi .resumen');
         const ln = document.createElement('div'); ln.className = 'ahorro-ln';
-        if (base) {
-          const dif = base.total - comboTotal;
+        if (baseInicial && baseInicial.found === found) {
           ln.innerHTML = '<span></span>';
-          ln.children[0].textContent = 'Ahorrás ' + fmt(dif) + ' frente a comprar todo en ' + SUPERS[base.k] + ' (' + fmt(base.total) + ').';
+          ln.children[0].textContent = 'Ahorrás ' + fmt(baseInicial.total - comboTotal) + ' frente a comprar todo en ' + SUPERS[baseInicial.k] + ' (' + fmt(baseInicial.total) + ').';
         }
         const vb = document.createElement('button'); vb.type = 'button'; vb.className = 'ahorro-btn';
-        vb.textContent = base ? 'Ver de dónde sale el ahorro (' + filas.length + ')' : 'Ver las ofertas de tu carrito (' + filas.length + ')';
-        vb.addEventListener('click', () => verAhorro(filas, base));
+        vb.textContent = baseInicial ? 'Ver de dónde sale el ahorro' : 'Ver las ofertas de tu carrito';
+        vb.addEventListener('click', () => verAhorro(baseInicial));
         ln.appendChild(vb);
         if (rs) rs.appendChild(ln);
       }
-    }
-    function verAhorro(filas, base){
-      const cont = document.createElement('div'); cont.className = 'ah-list';
-      filas.forEach(f => {
-        const c = document.createElement('div'); c.className = 'ah-card'; c.style.setProperty('--tc', COLOR_TIENDA[f.k] || 'var(--accent)');
-        c.innerHTML = '<div class="ah-top"><b class="ah-n"></b><span class="ah-t"></span></div><div class="ah-p"></div><div class="ah-b"></div>';
-        c.prepend(fotoMini(f.x.p.imagen || f.x.it.img, 'lthumb'));
-        c.querySelector('.ah-n').textContent = (f.x.it.qty !== 1 ? fmtQ(f.x.it.qty) + ' × ' : '') + f.x.p.nombre;
-        const tg = c.querySelector('.ah-t'); tg.textContent = SUPERS[f.k] + (f.conOferta ? ' · 🔥 ' + String(f.x.p.promo || 'Oferta').split(' · ')[0] : '');
-        const pp = c.querySelector('.ah-p');
-        const sin = f.x.p.precio * f.x.it.qty, con = f.x.u * f.x.it.qty;
-        if (f.conOferta) pp.innerHTML = '<span>Sin oferta <s></s></span><span>Con oferta <b></b></span>';
-        else pp.innerHTML = '<span>Precio <b></b></span>';
-        if (f.conOferta) { pp.querySelector('s').textContent = fmt(sin); pp.querySelector('b').textContent = fmt(con); }
-        else pp.querySelector('b').textContent = fmt(con);
-        const bb = c.querySelector('.ah-b');
-        if (f.enBase) { bb.innerHTML = '<span></span><em></em>'; bb.children[0].textContent = 'En ' + SUPERS[base.k] + ': ' + fmt(f.enBase.u * f.x.it.qty); bb.children[1].textContent = 'Ahorrás ' + fmt(f.ahorro); }
-        else bb.remove();
-        cont.appendChild(c);
-      });
-      const tot = filas.reduce((s, f) => s + f.ahorro, 0);
-      abrirModal({
-        titulo: base ? '¿Vale la pena ir a varios ' + (SUPERS.coto ? 'súper' : 'lugares') + '?' : 'Ofertas de tu carrito',
-        sub: base ? 'Estos productos te hacen ahorrar ' + fmt(tot) + ' frente a comprar todo en ' + SUPERS[base.k] + '. Vos decidís si te conviene.' : 'Productos con oferta en el súper donde están más baratos.',
-        cuerpo: cont, acciones: [] });
+      function verAhorro(baseSel){
+        const cont = document.createElement('div');
+        const pintar = base => {
+          cont.innerHTML = '';
+          // elegir contra qué súper comparar
+          const cmpT = document.createElement('div'); cmpT.className = 'ah-lbl'; cmpT.textContent = 'Comparar con:'; cont.appendChild(cmpT);
+          const ch = document.createElement('div'); ch.className = 'ah-chips';
+          singles.slice().sort((a, b) => (b.found === found) - (a.found === found) || a.total - b.total).forEach(s => {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'ah-chip' + (base && base.k === s.k ? ' on' : '');
+            b.style.setProperty('--tc', COLOR_TIENDA[s.k] || 'var(--accent)'); b.textContent = SUPERS[s.k];
+            b.addEventListener('click', () => pintar(s)); ch.appendChild(b);
+          });
+          cont.appendChild(ch);
+          const fs = filasVs(base);
+          const res1 = document.createElement('div'); res1.className = 'ah-res';
+          if (!base) res1.textContent = 'Productos con oferta en el ' + (SUPERS.coto ? 'súper' : 'lugar') + ' donde están más baratos.';
+          else if (base.found === found) {
+            const dif = base.total - comboTotal;
+            res1.innerHTML = '<b></b><span></span>';
+            res1.children[0].textContent = 'Ahorrás ' + fmt(dif);
+            res1.children[1].textContent = ' combinando ' + combo.size + ' ' + PLs + ', frente a comprar todo en ' + SUPERS[base.k] + ' (' + fmt(base.total) + ').';
+          } else res1.textContent = SUPERS[base.k] + ' no tiene ' + (found - base.found) + ' de tus productos: igual tendrías que ir a otro ' + (SUPERS.coto ? 'súper' : 'lugar') + ' para esos.';
+          cont.appendChild(res1);
+          if (!fs.length) { const n = document.createElement('div'); n.className = 'hint'; n.textContent = 'Comprando todo en ' + SUPERS[base.k] + ' pagás lo mismo.'; cont.appendChild(n); return; }
+          // agrupado por súper
+          const porK = new Map(); fs.forEach(f => { if (!porK.has(f.k)) porK.set(f.k, []); porK.get(f.k).push(f); });
+          [...porK.entries()].sort((a, b) => b[1].reduce((s, f) => s + f.ahorro, 0) - a[1].reduce((s, f) => s + f.ahorro, 0)).forEach(([k, arr]) => {
+            const sec = document.createElement('div'); sec.className = 'ah-sec'; sec.style.setProperty('--tc', COLOR_TIENDA[k] || 'var(--accent)');
+            const sub = arr.reduce((s, f) => s + f.ahorro, 0);
+            sec.innerHTML = '<div class="ah-sh"><i class="av"></i><b></b><em></em></div>';
+            sec.querySelector('.av').textContent = SUPERS[k].charAt(0);
+            sec.querySelector('b').textContent = SUPERS[k] + ' · ' + arr.length + (arr.length === 1 ? ' producto' : ' productos');
+            sec.querySelector('em').textContent = sub > 0.5 ? 'Ahorrás ' + fmt(sub) : '';
+            arr.sort((a, b) => b.ahorro - a.ahorro).forEach(f => {
+              const c = document.createElement('div'); c.className = 'ah-card';
+              c.innerHTML = '<div class="ah-top"><b class="ah-n"></b><span class="ah-t"></span></div><div class="ah-p"></div><div class="ah-b"></div>';
+              c.prepend(fotoMini(f.x.p.imagen || f.x.it.img, 'lthumb'));
+              c.querySelector('.ah-n').textContent = (f.x.it.qty !== 1 ? fmtQ(f.x.it.qty) + ' × ' : '') + f.x.p.nombre;
+              const tg = c.querySelector('.ah-t'); if (f.conOferta) tg.textContent = '🔥 ' + String(f.x.p.promo || 'Oferta').split(' · ')[0]; else tg.remove();
+              const pp = c.querySelector('.ah-p'), sin = f.x.p.precio * f.x.it.qty, con = f.x.u * f.x.it.qty;
+              if (f.conOferta) { pp.innerHTML = '<span>Sin oferta <s></s></span><span>Con oferta <b></b></span>'; pp.querySelector('s').textContent = fmt(sin); pp.querySelector('b').textContent = fmt(con); }
+              else { pp.innerHTML = '<span>Precio <b></b></span>'; pp.querySelector('b').textContent = fmt(con); }
+              const bb = c.querySelector('.ah-b');
+              if (!base) bb.remove();
+              else if (f.enBase) { bb.innerHTML = '<span></span><em></em>'; bb.children[0].textContent = 'En ' + SUPERS[base.k] + ': ' + fmt(f.enBase.u * f.x.it.qty); bb.children[1].textContent = 'Ahorrás ' + fmt(f.ahorro); }
+              else { bb.innerHTML = '<span></span>'; bb.children[0].textContent = SUPERS[base.k] + ' no lo tiene'; }
+              sec.appendChild(c);
+            });
+            cont.appendChild(sec);
+          });
+        };
+        pintar(baseSel);
+        abrirModal({ titulo: '¿Vale la pena ir a varios ' + PLs + '?', sub: 'Mirá qué productos te hacen ahorrar y decidí si te conviene.', cuerpo: cont, acciones: [] });
+      }
     }
     // 2) Todo en un solo lugar: un botón por tienda; al tocarlo se despliega ese carrito
     const unoTit = document.createElement('div'); unoTit.className = 'sub opts-t'; unoTit.textContent = '¿Querés comprar todo en un solo lugar?';
