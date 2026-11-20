@@ -389,6 +389,18 @@
   .opt.incompleta h4 span:last-child{color:var(--muted)}
   .opt details>summary{font-size:14px;color:var(--muted);text-align:left;margin:6px 0 4px}
   .opts-t{margin-top:14px}
+  /* el carrito más conveniente: resumen arriba y una tarjeta por tienda */
+  .opt.multi{background:none!important;border:0!important;padding:0!important;box-shadow:none!important}
+  .opt.multi .resumen{background:color-mix(in srgb, var(--tag) 16%, var(--card));border:2px solid var(--tag);border-radius:18px;padding:14px 16px}
+  .opt.multi .resumen h4{margin:0}
+  .opt.multi .grp{background:var(--card);border:1.5px solid var(--line);border-top:5px solid var(--tc);border-radius:18px;padding:12px 14px 6px;margin-top:12px;box-shadow:0 6px 16px -10px rgba(40,20,60,.35)}
+  .opt.multi .grp-h{padding-bottom:8px;margin-bottom:4px;border-bottom:1px dashed var(--line)}
+  .opt.multi .grp-h .av{flex:none;width:38px;height:38px;border-radius:50%;background:var(--tc);color:#fff;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:17px}
+  .opt.multi .grp-h>span{flex:1}
+  .opt.multi .grp-h b{font-size:17px}
+  .opt.multi .grp-h small{font-size:13px}
+  .opt.multi .grp-h small span{white-space:nowrap}
+  .uno-chip{border-left:5px solid var(--tc, var(--line))!important}
   .uno-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:8px 0 12px}
   .uno-chip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-align:left;font:inherit}
   .uno-chip b{font-size:15px}
@@ -2132,6 +2144,7 @@
   }
 
   let planTienda = null;
+  const COLOR_TIENDA = { coto: '#E30613', carrefour: '#1E4B9B', dia: '#E2001A', changomas: '#00A651', jumbo: '#2E9E44', vea: '#D7182A', disco: '#C8102E', farmaonline: '#7DB928', farmacity: '#00A859', simplicity: '#E5007E', pigmento: '#6A2C91', gpsfarma: '#0072BC' };
   function renderPlan(l, box, res){
     const keys = Object.keys(SUPERS);
     // Opción combinada: cada producto en el súper más barato
@@ -2161,16 +2174,23 @@
     // Todas las opciones, de la más barata a la más cara: combinar tiendas y todo en una sola tienda
     const aItems = lines => lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }));
     function tarjetaOpcion(op, idx){
-      const o = document.createElement('div'); o.className = 'opt' + (idx === 0 ? ' win' : '') + (op.faltan ? ' incompleta' : '');
+      const multi = op.grupos.length > 1;
+      const o = document.createElement('div'); o.className = 'opt' + (idx === 0 ? ' win' : '') + (op.faltan ? ' incompleta' : '') + (multi ? ' multi' : '');
       o.innerHTML = `<h4><span></span><span>${fmt(op.total)}</span></h4><div class="os"></div>`;
       o.querySelector('h4 span').textContent = op.titulo;
       o.querySelector('.os').innerHTML = op.sub;
       if (idx === 0) { const b = document.createElement('span'); b.className = 'bestTag'; b.textContent = 'Más barato'; o.querySelector('.os').prepend(b); }
+      if (multi) { const rs = document.createElement('div'); rs.className = 'resumen'; rs.append(o.querySelector('h4'), o.querySelector('.os')); o.prepend(rs); }
       op.grupos.forEach(([k, g]) => {
-        const d = document.createElement('div'); d.className = 'grp';
+        const d = document.createElement('div'); d.className = 'grp'; d.style.setProperty('--tc', COLOR_TIENDA[k] || 'var(--accent)');
         const hd = document.createElement('div'); hd.className = 'grp-h';
         hd.innerHTML = '<span><b></b><small></small></span>';
-        if (op.grupos.length > 1) { hd.querySelector('b').textContent = SUPERS[k]; hd.querySelector('small').textContent = fmt(g.total); }
+        if (multi) {
+          const av = document.createElement('i'); av.className = 'av'; av.textContent = SUPERS[k].charAt(0); hd.prepend(av);
+          hd.querySelector('b').textContent = SUPERS[k];
+          const sm = hd.querySelector('small'); sm.innerHTML = '<span></span> <span></span>';
+          sm.children[0].textContent = g.lines.length + (g.lines.length === 1 ? ' producto ·' : ' productos ·'); sm.children[1].textContent = fmt(g.total);
+        }
         else { hd.querySelector('span').replaceChildren(...o.querySelector('.os').childNodes); o.querySelector('.os').remove(); d.classList.add('solo'); }
         const pb = document.createElement('button'); pb.type = 'button';
         pb.className = 'btn pasar' + ((box.querySelectorAll('.pasar').length + o.querySelectorAll('.pasar').length) % 2 ? ' rosa' : '');
@@ -2233,7 +2253,7 @@
     const ordenK = Object.keys(SUPERS).map(k => singles.find(s => s.k === k) || { k, total: 0, found: 0, lines: [], miss: l.items.slice() })
       .sort((a, b) => (b.found === found) - (a.found === found) || b.found - a.found || a.total - b.total);
     ordenK.forEach(s => {
-      const c = document.createElement('button'); c.type = 'button'; c.className = 'uno-chip' + (planTienda === s.k ? ' on' : '');
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'uno-chip' + (planTienda === s.k ? ' on' : ''); c.style.setProperty('--tc', COLOR_TIENDA[s.k] || 'var(--line)');
       c.innerHTML = '<b></b><span></span>';
       c.children[0].textContent = SUPERS[s.k];
       c.children[1].textContent = !s.found ? 'No tiene' : s.found === found ? fmt(s.total) : 'Tiene ' + s.found + ' de ' + found;
