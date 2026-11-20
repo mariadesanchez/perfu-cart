@@ -389,6 +389,20 @@
   .opt.incompleta h4 span:last-child{color:var(--muted)}
   .opt details>summary{font-size:14px;color:var(--muted);text-align:left;margin:6px 0 4px}
   .opts-t{margin-top:14px}
+  .ahorro-ln{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed color-mix(in srgb, var(--tag) 60%, var(--line))}
+  .ahorro-ln span{font-weight:700;color:#1F8A4C;font-size:14px}
+  .ahorro-btn{border:0;border-radius:12px;padding:8px 12px;font:inherit;font-weight:800;font-size:14px;background:var(--ink);color:var(--card);cursor:pointer}
+  .ah-list{display:grid;gap:10px;padding:6px 0}
+  .ah-card{display:grid;grid-template-columns:44px 1fr;gap:4px 12px;padding:12px;border:1.5px solid var(--line);border-left:5px solid var(--tc);border-radius:14px}
+  .ah-card .lthumb{grid-row:span 3}
+  .ah-top{display:flex;flex-direction:column;gap:2px}
+  .ah-n{font-weight:700;line-height:1.25}
+  .ah-t{font-size:13px;font-weight:800;color:var(--tc)}
+  .ah-p{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--muted)}
+  .ah-p s{color:var(--muted)}
+  .ah-p b{color:var(--price-hot);font-size:15px}
+  .ah-b{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;font-size:13px;color:var(--muted)}
+  .ah-b em{font-style:normal;font-weight:800;color:#1F8A4C}
   /* botón de cada tienda: carrito + nombre, del color de la tienda */
   .opt .grp .pasar,.opt .grp .pasar.rosa{display:inline-flex;align-items:center;gap:6px;background:var(--tc)!important;color:#fff;box-shadow:0 3px 0 color-mix(in srgb, var(--tc) 70%, #000)!important}
   .opt .grp .pasar svg{width:18px;height:18px;flex:none}
@@ -2252,6 +2266,57 @@
     const mejor = { titulo: 'Tu carrito más conveniente', total: comboTotal, grupos: [...combo.entries()].sort((a, b) => b[1].total - a[1].total),
       sub: combo.size > 1 ? 'Combinando ' + combo.size + ' ' + PL + ': cada producto donde está más barato.' : 'Todo en ' + SUPERS[[...combo.keys()][0]] + ' es lo más barato.' };
     box.appendChild(tarjetaOpcion(mejor, 0));
+    // ¿Vale la pena ir a varios súper? Ahorro frente a comprar todo en un solo lugar, producto por producto
+    if (combo.size > 1) {
+      const base = singles.filter(s => s.found === found).sort((a, b) => a.total - b.total)[0];
+      const filas = [];
+      combo.forEach((g, k) => g.lines.forEach(x => {
+        const enBase = base && base.lines.find(y => y.it.id === x.it.id);
+        const ahorro = enBase ? (enBase.u - x.u) * x.it.qty : 0;
+        const conOferta = !!(x.p.precio_promo && x.u < x.p.precio - 0.5);
+        if (ahorro > 0.5 || (!base && conOferta)) filas.push({ k, x, enBase, ahorro, conOferta });
+      }));
+      filas.sort((a, b) => b.ahorro - a.ahorro);
+      if (filas.length) {
+        const rs = box.querySelector('.opt.multi .resumen');
+        const ln = document.createElement('div'); ln.className = 'ahorro-ln';
+        if (base) {
+          const dif = base.total - comboTotal;
+          ln.innerHTML = '<span></span>';
+          ln.children[0].textContent = 'Ahorrás ' + fmt(dif) + ' frente a comprar todo en ' + SUPERS[base.k] + ' (' + fmt(base.total) + ').';
+        }
+        const vb = document.createElement('button'); vb.type = 'button'; vb.className = 'ahorro-btn';
+        vb.textContent = base ? 'Ver de dónde sale el ahorro (' + filas.length + ')' : 'Ver las ofertas de tu carrito (' + filas.length + ')';
+        vb.addEventListener('click', () => verAhorro(filas, base));
+        ln.appendChild(vb);
+        if (rs) rs.appendChild(ln);
+      }
+    }
+    function verAhorro(filas, base){
+      const cont = document.createElement('div'); cont.className = 'ah-list';
+      filas.forEach(f => {
+        const c = document.createElement('div'); c.className = 'ah-card'; c.style.setProperty('--tc', COLOR_TIENDA[f.k] || 'var(--accent)');
+        c.innerHTML = '<div class="ah-top"><b class="ah-n"></b><span class="ah-t"></span></div><div class="ah-p"></div><div class="ah-b"></div>';
+        c.prepend(fotoMini(f.x.p.imagen || f.x.it.img, 'lthumb'));
+        c.querySelector('.ah-n').textContent = (f.x.it.qty !== 1 ? fmtQ(f.x.it.qty) + ' × ' : '') + f.x.p.nombre;
+        const tg = c.querySelector('.ah-t'); tg.textContent = SUPERS[f.k] + (f.conOferta ? ' · 🔥 ' + String(f.x.p.promo || 'Oferta').split(' · ')[0] : '');
+        const pp = c.querySelector('.ah-p');
+        const sin = f.x.p.precio * f.x.it.qty, con = f.x.u * f.x.it.qty;
+        if (f.conOferta) pp.innerHTML = '<span>Sin oferta <s></s></span><span>Con oferta <b></b></span>';
+        else pp.innerHTML = '<span>Precio <b></b></span>';
+        if (f.conOferta) { pp.querySelector('s').textContent = fmt(sin); pp.querySelector('b').textContent = fmt(con); }
+        else pp.querySelector('b').textContent = fmt(con);
+        const bb = c.querySelector('.ah-b');
+        if (f.enBase) { bb.innerHTML = '<span></span><em></em>'; bb.children[0].textContent = 'En ' + SUPERS[base.k] + ': ' + fmt(f.enBase.u * f.x.it.qty); bb.children[1].textContent = 'Ahorrás ' + fmt(f.ahorro); }
+        else bb.remove();
+        cont.appendChild(c);
+      });
+      const tot = filas.reduce((s, f) => s + f.ahorro, 0);
+      abrirModal({
+        titulo: base ? '¿Vale la pena ir a varios ' + (SUPERS.coto ? 'súper' : 'lugares') + '?' : 'Ofertas de tu carrito',
+        sub: base ? 'Estos productos te hacen ahorrar ' + fmt(tot) + ' frente a comprar todo en ' + SUPERS[base.k] + '. Vos decidís si te conviene.' : 'Productos con oferta en el súper donde están más baratos.',
+        cuerpo: cont, acciones: [] });
+    }
     // 2) Todo en un solo lugar: un botón por tienda; al tocarlo se despliega ese carrito
     const unoTit = document.createElement('div'); unoTit.className = 'sub opts-t'; unoTit.textContent = '¿Querés comprar todo en un solo lugar?';
     box.appendChild(unoTit);
