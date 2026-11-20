@@ -1322,7 +1322,7 @@
   let confirmCb = null;
   // ---------- Modal reutilizable ----------
   let dlgVolver = null;
-  function abrirModal({ titulo, sub = '', cuerpo, acciones = [{ label: 'Listo', primary: true }] }){
+  function abrirModal({ titulo, sub = '', cuerpo, acciones = [] }){
     dlgVolver = document.activeElement;
     $('dlgTitle').textContent = titulo; $('dlgSub').textContent = sub; $('dlgSub').hidden = !sub;
     const b = $('dlgBody'); b.replaceChildren(cuerpo); b.scrollTop = 0;
@@ -2277,7 +2277,7 @@
         if (alt) { sm.append(' · lo tiene '); const em = document.createElement('em'); em.textContent = SUPERS[alt.o] + ' a ' + fmt(alt.u); sm.appendChild(em); }
         ul.appendChild(row);
       });
-      abrirModal({ titulo: 'Faltantes en ' + SUPERS[k], sub: falt.length + (falt.length === 1 ? ' producto de tu lista no está' : ' productos de tu lista no están') + ' en ' + SUPERS[k] + '.', cuerpo: ul, acciones: [{ label: 'Entendido', primary: true }] });
+      abrirModal({ titulo: 'Faltantes en ' + SUPERS[k], sub: falt.length + (falt.length === 1 ? ' producto de tu lista no está' : ' productos de tu lista no están') + ' en ' + SUPERS[k] + '.', cuerpo: ul, acciones: [] });
     }
     const sel = singles.find(s => s.k === planTienda);
     if (sel) {
