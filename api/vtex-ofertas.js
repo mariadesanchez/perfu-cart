@@ -71,15 +71,20 @@ async function contar(host, rubro, hasta) {
 const esFin = (r, page) => r.productos.length < POR_PAGINA || r.ofertas.length < 3 || page >= MAX_PAGINAS;
 
 // GPS Farma: todas sus ofertas de una vez, agrupadas por rubro (se guardan 30 minutos)
-let gpsCache = null;
+let gpsCache = null, gpsPendiente = null;
 async function ofertasGps() {
   if (gpsCache && Date.now() - gpsCache.t < 30 * 60 * 1000) return gpsCache.d;
-  const lista = (await gps.ofertas(leerPromos)).map(p => aOferta(p)).filter(Boolean);
+  if (!gpsPendiente) gpsPendiente = leerGps().finally(() => { gpsPendiente = null; });
+  return gpsPendiente;
+}
+async function leerGps() {
+  const crudo = await gps.ofertas(leerPromos);
+  const lista = crudo.map(p => aOferta(p)).filter(Boolean);
   const por = new Map();
   lista.forEach(o => { const r = o.rubro || 'Otros'; if (!por.has(r)) por.set(r, []); por.get(r).push(o); });
   por.forEach(v => v.sort((a, b) => b.descuento - a.descuento));
-  const d = { por, total: lista.length };
-  gpsCache = { t: Date.now(), d };
+  const d = { por, total: lista.length, lista, completo: crudo.completo !== false };
+  if (d.completo) gpsCache = { t: Date.now(), d };
   return d;
 }
 const slug = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -92,8 +97,10 @@ async function handler(req, res) {
   if (!tienda) { res.statusCode = 400; return res.end(JSON.stringify({ ok: false, error: 'Tienda desconocida' })); }
   try {
     if (tienda.magento) {
-      const { por, total } = await ofertasGps();
-      res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
+      const { por, total, lista, completo } = await ofertasGps();
+      res.setHeader('Cache-Control', completo ? 's-maxage=1800, stale-while-revalidate=3600' : 's-maxage=60');
+      // todas las ofertas de una vez (lo usa el historial diario)
+      if (q.todas) return res.end(JSON.stringify({ ok: true, super: tienda.nombre, total, completo, ofertas: lista }));
       if (q.rubros) {
         const rubros = [...por.entries()].filter(([n]) => !GENERICO.test(n)).map(([n, v]) => ({ id: slug(n), nombre: n, ofertas: v.length, paginas: Math.max(1, Math.ceil(v.length / POR_PAGINA)) }));
         return res.end(JSON.stringify({ ok: true, super: tienda.nombre, total, rubros }));
