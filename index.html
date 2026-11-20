@@ -439,6 +439,32 @@
   .cat li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
   .cat li small{color:var(--muted);display:block;font-variant-numeric:tabular-nums}
   .search{margin-top:10px}
+  /* ---------- Modal reutilizable: hoja desde abajo en el celu, ventana centrada en la compu ---------- */
+  .dlg{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:rgba(34,22,46,.5);opacity:0;transition:opacity .18s}
+  .dlg[hidden]{display:none}
+  .dlg.open{opacity:1}
+  .dlg-box{background:var(--card);width:100%;max-width:520px;max-height:86vh;display:flex;flex-direction:column;border-radius:22px 22px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(24px);transition:transform .22s ease;padding-bottom:env(safe-area-inset-bottom)}
+  .dlg.open .dlg-box{transform:none}
+  @media (min-width:640px){ .dlg{align-items:center;padding:20px} .dlg-box{border-radius:22px;max-height:80vh} }
+  .dlg-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 18px 10px;border-bottom:1px solid var(--line)}
+  .dlg-h b{display:block;font-family:var(--display);font-size:20px;line-height:1.2}
+  .dlg-h small{display:block;color:var(--muted);font-size:14px;margin-top:4px}
+  .dlg-x{flex:none;width:36px;height:36px;border-radius:50%;border:0;background:var(--bg);color:var(--ink);font-size:16px;cursor:pointer}
+  .dlg-body{overflow:auto;padding:8px 18px 12px;-webkit-overflow-scrolling:touch}
+  .dlg-f{display:flex;gap:10px;padding:12px 18px 16px;border-top:1px solid var(--line)}
+  .dlg-f:empty{display:none}
+  .dlg-f .btn{flex:1;justify-content:center}
+  body.dlg-on{overflow:hidden}
+  .mf-row{display:grid;grid-template-columns:44px 1fr;gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .mf-row:last-child{border-bottom:0}
+  .mf-row .lthumb{grid-row:span 2}
+  .mf-row b{font-weight:600;line-height:1.25}
+  .mf-row small{color:var(--muted);font-size:13px}
+  .mf-row small em{font-style:normal;color:var(--price-hot);font-weight:700}
+  .grp-acts{display:flex;gap:8px;flex:none;align-items:center;margin-left:auto}
+  .grp-h:has(.grp-acts){flex-wrap:wrap}
+  .grp-h:has(.grp-acts)>span{flex-basis:100%}
+  .falt-btn{flex:none;padding:8px 12px;font-size:14px;font-weight:800;border-radius:12px;border:1.5px solid var(--price-hot);color:var(--price-hot);background:var(--card);cursor:pointer}
   .modal{position:fixed;inset:0;background:rgba(34,22,46,.5);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
   .modal .box{background:var(--card);border-radius:18px;padding:22px;max-width:340px;width:100%}
   .modal p{margin:0 0 16px}
@@ -968,6 +994,13 @@
   </div>
 </div>
 
+<div class="dlg" id="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+  <div class="dlg-box">
+    <div class="dlg-h"><div><b id="dlgTitle"></b><small id="dlgSub"></small></div><button type="button" class="dlg-x" id="dlgX" aria-label="Cerrar">✕</button></div>
+    <div class="dlg-body" id="dlgBody"></div>
+    <div class="dlg-f" id="dlgF"></div>
+  </div>
+</div>
 <div class="modal" id="modal"><div class="box">
   <p><b id="mTitle">¿Vaciar el ticket?</b><br><span id="mText" style="color:var(--muted);font-size:14px">Se borran los productos de esta compra. Tus productos guardados y sus precios se mantienen.</span></p>
   <div class="row"><button class="btn btn-ghost" style="flex:1" id="mNo">Cancelar</button><button class="btn btn-primary" style="flex:1;background:var(--danger);color:#fff" id="mYes">Vaciar</button></div>
@@ -1275,6 +1308,28 @@
   });
   // Diálogo de confirmación reutilizable
   let confirmCb = null;
+  // ---------- Modal reutilizable ----------
+  let dlgVolver = null;
+  function abrirModal({ titulo, sub = '', cuerpo, acciones = [{ label: 'Listo', primary: true }] }){
+    dlgVolver = document.activeElement;
+    $('dlgTitle').textContent = titulo; $('dlgSub').textContent = sub; $('dlgSub').hidden = !sub;
+    const b = $('dlgBody'); b.replaceChildren(cuerpo); b.scrollTop = 0;
+    const f = $('dlgF'); f.innerHTML = '';
+    acciones.forEach(a => { const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn ' + (a.primary ? 'btn-primary' : 'btn-ghost'); bt.textContent = a.label;
+      bt.addEventListener('click', () => { if (!a.onClick || a.onClick() !== false) cerrarModal(); }); f.appendChild(bt); });
+    const d = $('dlg'); d.hidden = false; document.body.classList.add('dlg-on');
+    requestAnimationFrame(() => d.classList.add('open'));
+    setTimeout(() => $('dlgX').focus(), 50);
+  }
+  function cerrarModal(){
+    const d = $('dlg'); if (d.hidden) return;
+    d.classList.remove('open'); document.body.classList.remove('dlg-on');
+    setTimeout(() => { d.hidden = true; $('dlgBody').innerHTML = ''; }, 180);
+    if (dlgVolver && dlgVolver.focus) try { dlgVolver.focus(); } catch(_) {}
+  }
+  $('dlgX').addEventListener('click', cerrarModal);
+  $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) cerrarModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('dlg').hidden) cerrarModal(); });
   function confirmBox(title, text, okLabel, cb){
     $('mTitle').textContent = title; $('mText').textContent = text; $('mYes').textContent = okLabel;
     confirmCb = cb; $('modal').style.display = 'flex';
@@ -2121,7 +2176,14 @@
         pb.className = 'btn pasar' + ((box.querySelectorAll('.pasar').length + o.querySelectorAll('.pasar').length) % 2 ? ' rosa' : '');
         pb.textContent = 'Ir a ' + SUPERS[k] + ' (' + g.lines.length + ') ›';
         pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, aItems(g.lines)));
-        hd.appendChild(pb); d.appendChild(hd);
+        if (op.faltantes && op.faltantes.length) {
+          const acts = document.createElement('div'); acts.className = 'grp-acts';
+          const fb = document.createElement('button'); fb.type = 'button'; fb.className = 'falt-btn';
+          fb.textContent = 'Faltantes (' + op.faltantes.length + ')';
+          fb.addEventListener('click', () => verFaltantes(k, op.faltantes));
+          acts.append(fb, pb); hd.appendChild(acts);
+        } else hd.appendChild(pb);
+        d.appendChild(hd);
         g.lines.forEach(x => {
           const ln = document.createElement('div'); ln.className = 'ln';
           ln.innerHTML = `<span class="lnn"></span><div class="mini-step"><button type="button" data-d="-1" aria-label="Menos">−</button><b>${fmtQ(x.it.qty)}</b><button type="button" data-d="1" aria-label="Más">+</button></div><span class="lnp"></span>`;
@@ -2180,11 +2242,28 @@
       chips.appendChild(c);
     });
     box.appendChild(chips);
+    function verFaltantes(k, falt){
+      const ul = document.createElement('div');
+      falt.forEach(it => {
+        const row = document.createElement('div'); row.className = 'mf-row';
+        row.innerHTML = '<b></b><small></small>';
+        row.prepend(fotoMini(it.img, 'lthumb'));
+        row.querySelector('b').textContent = it.name;
+        // dónde conseguirlo: el más barato entre los que sí lo tienen
+        let alt = null;
+        Object.keys(SUPERS).forEach(o => { const p = res[it.id] && res[it.id][o]; if (!p) return; const u = unitFor(p, it.qty); if (u > 0 && (!alt || u < alt.u)) alt = { o, u }; });
+        const sm = row.querySelector('small');
+        sm.textContent = fmtQ(it.qty) + (it.qty === 1 ? ' unidad' : ' unidades');
+        if (alt) { sm.append(' · lo tiene '); const em = document.createElement('em'); em.textContent = SUPERS[alt.o] + ' a ' + fmt(alt.u); sm.appendChild(em); }
+        ul.appendChild(row);
+      });
+      abrirModal({ titulo: 'Faltantes en ' + SUPERS[k], sub: falt.length + (falt.length === 1 ? ' producto de tu lista no está' : ' productos de tu lista no están') + ' en ' + SUPERS[k] + '.', cuerpo: ul, acciones: [{ label: 'Entendido', primary: true }] });
+    }
     const sel = singles.find(s => s.k === planTienda);
     if (sel) {
       const falt = sel.miss.filter(it => !missing.includes(it));
       box.appendChild(tarjetaOpcion({ titulo: 'Todo en ' + SUPERS[sel.k], total: sel.total, grupos: [[sel.k, { lines: sel.lines, total: sel.total }]],
-        sub: falt.length ? 'Tiene ' + sel.found + ' de ' + found + '. No tiene: ' + escH(nombres(falt)) + '.' : 'Tiene tus ' + found + (found === 1 ? ' producto.' : ' productos.') }, -1));
+        faltantes: falt, sub: falt.length ? 'Tiene ' + sel.found + ' de ' + found + '.' : 'Tiene tus ' + found + (found === 1 ? ' producto.' : ' productos.') }, -1));
     }
 
 
