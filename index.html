@@ -380,6 +380,12 @@
   .buy .hint{margin:0}
   .buy .note{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45}
   .opt details.solo-total>summary{text-align:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  .opt .os .bestTag{margin-right:8px;vertical-align:middle}
+  .opt h4 span:last-child{white-space:nowrap}
+  .opt.incompleta{opacity:.92}
+  .opt.incompleta h4 span:last-child{color:var(--muted)}
+  .opt details>summary{font-size:14px;color:var(--muted);text-align:left;margin:6px 0 4px}
+  .opts-t{margin-top:14px}
   .opt .pasar{width:100%;margin:4px 0 10px;padding:12px;font-size:16px;font-weight:800;border:0;color:#fff;background:linear-gradient(180deg,#4DB2FF 0%,var(--accent) 100%);box-shadow:0 4px 0 var(--accent-deep), 0 10px 18px -10px rgba(0,0,0,.4)}
   .opt .pasar.rosa{background:linear-gradient(180deg,#FF5A9A 0%,var(--grape) 100%);box-shadow:0 4px 0 var(--grape-deep), 0 10px 18px -10px rgba(0,0,0,.4)}
   .opt .pasar:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-deep)}
@@ -2062,29 +2068,50 @@
     box.innerHTML = '';
     if (!found) { box.innerHTML = '<div class="hint">No encontré estos productos en ninguna tienda. Probá agregarlos con el código de barras.</div>'; return; }
 
-    const o1 = document.createElement('div'); o1.className = 'opt win';
-    o1.innerHTML = `<h4><span>La opción más conveniente</span><span>${fmt(comboTotal)}</span></h4>
-      <div class="os">${combo.size === 1 ? `Todo en <b>${SUPERS[[...combo.keys()][0]]}</b> es lo más conveniente` : `${combo.size} tiendas distintas${saving > 0.5 ? ` · ahorrás <b>${fmt(saving)}</b> vs. todo en ${SUPERS[fullSingle.k]}` : ''}`}</div>`;
-    [...combo.entries()].sort((a, b) => b[1].total - a[1].total).forEach(([k, g]) => {
-      const d = document.createElement('details');
-      d.innerHTML = `<summary></summary>`;
-      d.querySelector('summary').textContent = fmt(g.total);
-      d.classList.add('solo-total');
-      g.lines.forEach(x => {
-        const ln = document.createElement('div'); ln.className = 'ln';
-        ln.innerHTML = '<span></span><span></span>';
-        ln.children[0].textContent = `${fmtQ(x.it.qty)} × ${x.p.nombre}`;
-        ln.children[1].textContent = fmt(x.u * x.it.qty);
-        ln.prepend(fotoMini(x.p.imagen || x.it.img, 'pthumb'));
-        d.appendChild(ln);
+    // Todas las opciones, de la más barata a la más cara: combinar tiendas y todo en una sola tienda
+    const aItems = lines => lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }));
+    function tarjetaOpcion(op, idx){
+      const o = document.createElement('div'); o.className = 'opt' + (idx === 0 ? ' win' : '') + (op.faltan ? ' incompleta' : '');
+      o.innerHTML = `<h4><span></span><span>${fmt(op.total)}</span></h4><div class="os"></div>`;
+      o.querySelector('h4 span').textContent = op.titulo;
+      o.querySelector('.os').innerHTML = op.sub;
+      if (idx === 0) { const b = document.createElement('span'); b.className = 'bestTag'; b.textContent = 'Más barato'; o.querySelector('.os').prepend(b); }
+      op.grupos.forEach(([k, g]) => {
+        const d = document.createElement('details');
+        d.innerHTML = '<summary></summary>';
+        d.querySelector('summary').textContent = op.grupos.length > 1 ? SUPERS[k] + ' · ' + fmt(g.total) + ' · ver productos' : 'Ver productos';
+        g.lines.forEach(x => {
+          const ln = document.createElement('div'); ln.className = 'ln';
+          ln.innerHTML = '<span></span><span></span>';
+          ln.children[0].textContent = `${fmtQ(x.it.qty)} × ${x.p.nombre}`;
+          ln.children[1].textContent = fmt(x.u * x.it.qty);
+          ln.prepend(fotoMini(x.p.imagen || x.it.img, 'pthumb'));
+          d.appendChild(ln);
+        });
+        o.appendChild(d);
+        const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn pasar' + ((box.querySelectorAll('.pasar').length + o.querySelectorAll('.pasar').length) % 2 ? ' rosa' : '');
+        pb.textContent = (SIN_CARRO[k] ? 'Ver en ' : 'Pasar a ') + SUPERS[k] + ' (' + g.lines.length + ') ›';
+        pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, aItems(g.lines)));
+        o.appendChild(pb);
       });
-      o1.appendChild(d);
-      const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn pasar' + (o1.querySelectorAll('.pasar').length % 2 ? ' rosa' : '');
-      pb.textContent = (SIN_CARRO[k] ? 'Ver en ' : 'Pasar a ') + SUPERS[k] + ' (' + g.lines.length + ') ›';
-      pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, g.lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }))));
-      o1.appendChild(pb);
-    });
-    box.appendChild(o1);
+      return o;
+    }
+    const nombres = arr => arr.map(it => it.name).join(', ');
+    const completas = singles.filter(s => s.found === found).map(s => ({ titulo: 'Todo en ' + SUPERS[s.k], total: s.total,
+      sub: 'Tiene tus ' + found + (found === 1 ? ' producto' : ' productos') + '.', grupos: [[s.k, { lines: s.lines, total: s.total }]] }));
+    if (combo.size > 1) completas.push({ titulo: 'Combinando ' + combo.size + ' tiendas', total: comboTotal,
+      sub: 'Cada producto en la tienda donde está más barato.', grupos: [...combo.entries()].sort((a, b) => b[1].total - a[1].total) });
+    completas.sort((a, b) => a.total - b.total);
+    const incompletas = singles.filter(s => s.found < found).sort((a, b) => b.found - a.found || a.total - b.total).map(s => ({ titulo: 'Todo en ' + SUPERS[s.k], total: s.total, faltan: true,
+      sub: 'Tiene ' + s.found + ' de ' + found + '. Le falta: ' + escH(nombres(s.miss.filter(it => !missing.includes(it)))) + '.', grupos: [[s.k, { lines: s.lines, total: s.total }]] }));
+    const tit = document.createElement('div'); tit.className = 'sub opts-t';
+    tit.textContent = completas.length > 1 ? 'Tus opciones, de la más barata a la más cara' : 'Tu opción';
+    box.appendChild(tit);
+    completas.forEach((op, i) => box.appendChild(tarjetaOpcion(op, i)));
+    if (incompletas.length) {
+      const h = document.createElement('div'); h.className = 'sub opts-t'; h.textContent = 'Tiendas que no tienen todo'; box.appendChild(h);
+      incompletas.forEach(op => box.appendChild(tarjetaOpcion(op, -1)));
+    }
 
 
     // Ofertas que no se aprovechan porque la cantidad no alcanza
