@@ -164,6 +164,23 @@
   .cmp-row .btn{padding:8px 12px;font-size:13px;border-radius:10px}
   .bestTag{display:inline-block;background:var(--tag);color:var(--tag-ink);font-family:"Figtree",sans-serif;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:2px}
   .cmp-name{font-size:14px;color:var(--muted);margin-top:2px}
+  .cmp-sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 4px}
+  .cmp-sum .cc{border-radius:14px;padding:10px 12px;border:1.5px solid var(--line);background:var(--card);min-width:0}
+  .cmp-sum .cc small{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cmp-sum .cc .t{font-family:var(--display);font-weight:700;font-size:16px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmp-sum .cc .v{font-family:var(--display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums;line-height:1.15}
+  .cmp-sum .cc .x{font-size:12px;color:var(--muted)}
+  .cmp-sum .cc.ok{border-color:var(--tag);background:color-mix(in srgb, var(--tag) 18%, var(--card))}
+  .cmp-sum .cc.ok small{color:var(--ink);opacity:.75}
+  .cmp-sum .cc.bad{border-color:color-mix(in srgb, var(--danger) 45%, var(--line));background:color-mix(in srgb, var(--danger) 7%, var(--card))}
+  .cmp-sum .cc.bad small,.cmp-sum .cc.bad .v{color:var(--danger)}
+  .cmp-ahorro{font-size:14px;margin:4px 0 2px;line-height:1.35}
+  .cmp-ahorro b{color:var(--price-hot)}
+  .worstTag{display:inline-block;background:color-mix(in srgb, var(--danger) 14%, var(--card));color:var(--danger);font-family:"Figtree",sans-serif;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:2px}
+  .scard .sstores span.worst{color:var(--danger)}
+  .scard .sworst{font-size:13px;color:var(--muted);margin-top:2px}
+  .scard .sworst b{color:var(--danger)}
+  .scard img,.scard .sn{cursor:pointer}
   .cmp-head{display:flex;align-items:center;gap:12px;margin:4px 0 8px}
   .cmp-head .cmp-name{font-size:15px;color:var(--ink);font-weight:600}
   .cthumb{width:72px;height:72px;flex:none;object-fit:contain;border-radius:12px;background:#fff;border:1px solid var(--line)}
@@ -1634,12 +1651,22 @@
     el.querySelector('.st').textContent = SUPERS[b.k];
     if (b.p.precio_promo) { const o = document.createElement('span'); o.className = 'off'; o.textContent = b.p.promo || 'Oferta'; el.querySelector('.sbest').appendChild(o); }
     const ss = el.querySelector('.sstores');
-    Object.entries(g.por).filter(([, pr]) => !pr.sin_stock && (pr.precio_promo || pr.precio)).map(([k, pr]) => ({ k, v: pr.precio_promo || pr.precio }))
-      .sort((x, y) => x.v - y.v).forEach((x, i) => { [SUPERS[x.k], fmt(x.v)].forEach(txt => { const s = document.createElement('span'); if (!i) s.className = 'best'; s.textContent = txt; ss.appendChild(s); }); });
+    const xs = Object.entries(g.por).filter(([, pr]) => !pr.sin_stock && (pr.precio_promo || pr.precio)).map(([k, pr]) => ({ k, v: pr.precio_promo || pr.precio }))
+      .sort((x, y) => x.v - y.v);
+    const ult = xs.length > 1 && xs[xs.length - 1].v > xs[0].v ? xs.length - 1 : -1;
+    xs.forEach((x, i) => { [SUPERS[x.k], fmt(x.v)].forEach(txt => { const s = document.createElement('span'); if (!i) s.className = 'best'; else if (i === ult) s.className = 'worst'; s.textContent = txt; ss.appendChild(s); }); });
+    if (ult > 0) {
+      const w = document.createElement('div'); w.className = 'sworst';
+      w.innerHTML = 'Más caro en <span></span>: <b>' + fmt(xs[ult].v) + '</b> (pagás ' + fmt(xs[ult].v - xs[0].v) + ' más)';
+      w.querySelector('span').textContent = SUPERS[xs[ult].k];
+      el.querySelector('.sbest').after(w);
+    }
     const ab = el.querySelector('[data-a=add]'); ab.textContent = inList ? '✓ En ' + l.name : '+ A mi lista';
     ab.addEventListener('click', () => { addToMyList(b.p, b.k); renderCoto(); });
     const cb = el.querySelector('[data-a=cmp]');
-    if (cb) cb.addEventListener('click', () => { handleCode(g.ean); setTimeout(() => $('cotoCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); });
+    const comparar = () => { handleCode(g.ean); setTimeout(() => $('cotoCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); };
+    if (cb) cb.addEventListener('click', comparar);
+    if (g.ean) [img, el.querySelector('.sn')].forEach(x => x.addEventListener('click', comparar));
     return el;
   }
   function renderCoto(){
@@ -1794,6 +1821,34 @@
       const s = document.createElement('div'); s.className = 'cmp-name'; s.textContent = anyName; n.appendChild(s); box.appendChild(n);
     }
     const best = found.length ? Math.min(...found.map(e => effPrice(e.prod))) : null;
+    const worst = found.length > 1 ? Math.max(...found.map(e => effPrice(e.prod))) : null;
+    // Resumen: la tienda más conveniente y la menos conveniente
+    const vals = found.map(e => ({ k: e.k, p: e.prod, v: effPrice(e.prod) })).sort((x, y) => x.v - y.v);
+    if (vals.length) {
+      const sum = document.createElement('div'); sum.className = 'cmp-sum';
+      const card = (cls, titulo, x) => {
+        const c = document.createElement('div'); c.className = 'cc ' + cls;
+        c.innerHTML = '<small></small><div class="t"></div><div class="v"></div><div class="x"></div>';
+        c.querySelector('small').textContent = titulo; c.querySelector('.t').textContent = SUPERS[x.k];
+        c.querySelector('.v').textContent = fmt(x.v);
+        c.querySelector('.x').textContent = x.p.precio_promo ? (x.p.promo || 'Oferta') + (lleva(x.p) > 1 ? ' · llevando ' + lleva(x.p) : '') : 'precio normal';
+        sum.appendChild(c);
+      };
+      const lo = vals[0], hi = vals[vals.length - 1];
+      if (vals.length > 1 && hi.v > lo.v) {
+        card('ok', 'Más conveniente', lo); card('bad', 'Menos conveniente', hi);
+        box.appendChild(sum);
+        const a = document.createElement('div'); a.className = 'cmp-ahorro';
+        const d = hi.v - lo.v, pct = Math.round(d / hi.v * 100);
+        a.innerHTML = 'Comprándolo en <span></span> ahorrás <b>' + fmt(d) + ' (' + pct + '%)</b> por unidad frente a <span></span>.';
+        const sp = a.querySelectorAll('span'); sp[0].textContent = SUPERS[lo.k]; sp[1].textContent = SUPERS[hi.k];
+        box.appendChild(a);
+      } else if (vals.length > 1) {
+        const a = document.createElement('div'); a.className = 'cmp-ahorro'; a.textContent = 'Está al mismo precio en las ' + vals.length + ' tiendas que lo tienen: ' + fmt(lo.v) + '.'; box.appendChild(a);
+      } else if (!loading) {
+        card('ok', 'Solo lo encontré en', lo); box.appendChild(sum);
+      }
+    }
     const order = entries.slice().sort((a, b) => {
       const av = x => x.prod && !x.prod.sin_stock;
       if (av(a) && av(b)) return effPrice(a.prod) - effPrice(b.prod);
@@ -1830,6 +1885,7 @@
           <div></div>`;
         const cs = row.querySelector('.cs'); cs.textContent = name;
         if (isBest) { const b = document.createElement('span'); b.className = 'bestTag'; b.textContent = 'Más barato'; cs.appendChild(b); }
+        else if (worst && ep === worst && worst > best) { const b = document.createElement('span'); b.className = 'worstTag'; b.textContent = 'Más caro'; cs.appendChild(b); }
         const cx = row.querySelector('.cx');
         const bits = [];
         if (p.promo) bits.push(`<b></b>`);
