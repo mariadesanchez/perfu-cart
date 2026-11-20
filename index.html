@@ -389,7 +389,14 @@
   .opt.incompleta h4 span:last-child{color:var(--muted)}
   .opt details>summary{font-size:14px;color:var(--muted);text-align:left;margin:6px 0 4px}
   .opts-t{margin-top:14px}
-  .opt .pasar{width:100%;margin:4px 0 10px;padding:12px;font-size:16px;font-weight:800;border:0;color:#fff;background:linear-gradient(180deg,#4DB2FF 0%,var(--accent) 100%);box-shadow:0 4px 0 var(--accent-deep), 0 10px 18px -10px rgba(0,0,0,.4)}
+  .grp{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+  .grp-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+  .grp-h span{display:flex;flex-direction:column;min-width:0}
+  .grp-h b{font-size:16px}
+  .grp-h small{color:var(--muted);font-size:14px;font-weight:700}
+  .grp.solo{margin-top:6px;padding-top:0;border-top:0}
+  .grp.solo .grp-h span{display:block;color:var(--muted);font-size:14px}
+  .opt .pasar{flex:none;width:auto;margin:0;padding:8px 12px;font-size:14px;font-weight:800;border:0;color:#fff;background:linear-gradient(180deg,#4DB2FF 0%,var(--accent) 100%);box-shadow:0 3px 0 var(--accent-deep)}
   .opt .pasar.rosa{background:linear-gradient(180deg,#FF5A9A 0%,var(--grape) 100%);box-shadow:0 4px 0 var(--grape-deep), 0 10px 18px -10px rgba(0,0,0,.4)}
   .opt .pasar:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-deep)}
   .opt .pasar.rosa:active{box-shadow:0 1px 0 var(--grape-deep)}
@@ -1190,7 +1197,8 @@
   async function exportarCarrito(n, btn, lista){
     const k = superKey()[n], host = TIENDA_HOST[k];
     const items = lista || cart.filter(it => groupOf(it) === n);
-    const nx = btn.nextElementSibling; if (nx && nx.classList.contains('note')) nx.remove();
+    const ancla = btn.closest('.grp-h') || btn;
+    const nx = ancla.nextElementSibling; if (nx && nx.classList.contains('note')) nx.remove();
     // la pestaña se abre ya, con el toque, para que el navegador no la bloquee
     const w = SIN_CARRO[k] ? null : window.open('', '_blank');
     const old = btn.textContent; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Preparando el carrito…';
@@ -1198,26 +1206,26 @@
     saveCart();
     btn.disabled = false; btn.textContent = old;
     if (SIN_CARRO[k]) {
-      btn.after(notaProductos(n + ' no permite cargar el carrito desde otra página. Abrí cada producto y agregalo; el envío o el retiro se eligen al pagar.', items, k));
+      ancla.after(notaProductos(n + ' no permite cargar el carrito desde otra página. Abrí cada producto y agregalo; el envío o el retiro se eligen al pagar.', items, k));
       return;
     }
     const ok = items.filter(it => it.sku), faltan = items.filter(it => !it.sku);
     if (!ok.length) {
       if (w) w.close();
-      btn.after(notaProductos('No encontré estos productos en ' + n + ' para cargarlos solos. Abrilos y agregalos desde la tienda:', faltan, k));
+      ancla.after(notaProductos('No encontré estos productos en ' + n + ' para cargarlos solos. Abrilos y agregalos desde la tienda:', faltan, k));
       return;
     }
     const qs = ok.map(it => 'sku=' + encodeURIComponent(it.sku) + '&qty=' + Math.max(1, Math.ceil(it.qty)) + '&seller=' + encodeURIComponent(it.seller || '1')).join('&');
     const url = host + '/checkout/cart/add?' + qs + '&redirect=true';
     if (w) { try { w.opener = null; } catch(_) {} w.location.href = url; } else location.href = url;
     toast(ok.length === 1 ? 'Abrí el carrito de ' + n : 'Pasé ' + ok.length + ' productos a ' + n);
-    if (faltan.length) btn.after(notaProductos('Estos no se pudieron pasar solos. Agregalos desde la tienda:', faltan, k));
+    if (faltan.length) ancla.after(notaProductos('Estos no se pudieron pasar solos. Agregalos desde la tienda:', faltan, k));
     if (VA_A_PORTADA[k]) {
       const d = document.createElement('div'); d.className = 'note';
       d.innerHTML = '<b></b><span></span>';
       d.children[0].textContent = 'Listo, tus productos ya están en ' + n + '.';
       d.children[1].textContent = n + ' abre su página de inicio: tocá Carrito para verlos, elegir envío o retiro y pagar.';
-      btn.after(d);
+      ancla.after(d);
     }
   }
 
@@ -2082,9 +2090,16 @@
       o.querySelector('.os').innerHTML = op.sub;
       if (idx === 0) { const b = document.createElement('span'); b.className = 'bestTag'; b.textContent = 'Más barato'; o.querySelector('.os').prepend(b); }
       op.grupos.forEach(([k, g]) => {
-        const d = document.createElement('details');
-        d.innerHTML = '<summary></summary>';
-        d.querySelector('summary').textContent = op.grupos.length > 1 ? SUPERS[k] + ' · ' + fmt(g.total) + ' · ver productos' : 'Ver productos';
+        const d = document.createElement('div'); d.className = 'grp';
+        const hd = document.createElement('div'); hd.className = 'grp-h';
+        hd.innerHTML = '<span><b></b><small></small></span>';
+        if (op.grupos.length > 1) { hd.querySelector('b').textContent = SUPERS[k]; hd.querySelector('small').textContent = fmt(g.total); }
+        else { hd.querySelector('span').replaceChildren(...o.querySelector('.os').childNodes); o.querySelector('.os').remove(); d.classList.add('solo'); }
+        const pb = document.createElement('button'); pb.type = 'button';
+        pb.className = 'btn pasar' + ((box.querySelectorAll('.pasar').length + o.querySelectorAll('.pasar').length) % 2 ? ' rosa' : '');
+        pb.textContent = 'Ir a ' + SUPERS[k] + ' (' + g.lines.length + ') ›';
+        pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, aItems(g.lines)));
+        hd.appendChild(pb); d.appendChild(hd);
         g.lines.forEach(x => {
           const ln = document.createElement('div'); ln.className = 'ln';
           ln.innerHTML = '<span></span><span></span>';
@@ -2094,10 +2109,6 @@
           d.appendChild(ln);
         });
         o.appendChild(d);
-        const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn pasar' + ((box.querySelectorAll('.pasar').length + o.querySelectorAll('.pasar').length) % 2 ? ' rosa' : '');
-        pb.textContent = (SIN_CARRO[k] ? 'Ver en ' : 'Pasar a ') + SUPERS[k] + ' (' + g.lines.length + ') ›';
-        pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, aItems(g.lines)));
-        o.appendChild(pb);
       });
       return o;
     }
