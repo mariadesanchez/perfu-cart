@@ -166,7 +166,7 @@
   .cmp-name{font-size:14px;color:var(--muted);margin-top:2px}
   .cmp-sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 4px}
   .cmp-sum .cc{border-radius:14px;padding:10px 12px;border:1.5px solid var(--line);background:var(--card);min-width:0}
-  .cmp-sum .cc small{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cmp-sum .cc small{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0;white-space:nowrap}
   .cmp-sum .cc .t{font-family:var(--display);font-weight:700;font-size:16px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cmp-sum .cc .v{font-family:var(--display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums;line-height:1.15}
   .cmp-sum .cc .x{font-size:12px;color:var(--muted)}
@@ -1664,7 +1664,7 @@
     const ab = el.querySelector('[data-a=add]'); ab.textContent = inList ? '✓ En ' + l.name : '+ A mi lista';
     ab.addEventListener('click', () => { addToMyList(b.p, b.k); renderCoto(); });
     const cb = el.querySelector('[data-a=cmp]');
-    const comparar = () => { handleCode(g.ean); setTimeout(() => $('cotoCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); };
+    const comparar = () => { handleCode(g.ean, g.nombre); setTimeout(() => $('cotoCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); };
     if (cb) cb.addEventListener('click', comparar);
     if (g.ean) [img, el.querySelector('.sn')].forEach(x => x.addEventListener('click', comparar));
     return el;
@@ -1784,19 +1784,30 @@
   let cmpState = null, cmpReq = 0;
   const lleva = p => { const m = /llevando\s*(\d+)/i.exec(p.promo || ''); return m ? +m[1] : 1; };
   const effPrice = p => p.precio_promo || p.precio;
-  async function compareAll(ean){
+  async function compareAll(ean, nombre){
     const my = ++cmpReq;
     cmpState = { ean, res: {} };
     Object.keys(SUPERS).forEach(k => cmpState.res[k] = { loading: true });
     renderCmp();
+    // GPS Farma no siempre encuentra por código de barras: se le pasa también el nombre (el conocido o el que den las otras tiendas)
+    let avisarNombre; const nombreListo = new Promise(r => { avisarNombre = r; });
+    if (nombre) avisarNombre(nombre);
+    const otras = Object.keys(SUPERS).filter(k => k !== 'gpsfarma');
+    Promise.all(otras.map(k => new Promise(r => { const t = setInterval(() => { if (my !== cmpReq || !cmpState.res[k].loading) { clearInterval(t); r(); } }, 150); }))).then(() => avisarNombre(''));
     await Promise.all(Object.keys(SUPERS).map(async k => {
       try {
         const params = new URLSearchParams({ ean, sucursal: cfg.suc || '200' });
+        if (k === 'gpsfarma') {
+          const n = await nombreListo;
+          const n2 = n || ((Object.values(cmpState.res).find(x => x.prod && x.prod.nombre) || {}).prod || {}).nombre;
+          if (n2) params.set('q', String(n2).slice(0, 60));
+        }
         const url = k === 'coto' ? '/api/coto?' : '/api/vtex?tienda=' + k + '&';
         const r = await fetch(url + params.toString());
         const d = r.ok ? await r.json() : {};
         const prod = (d.productos || []).find(p => p.exacto) || null;
         if (my === cmpReq) cmpState.res[k] = { prod };
+        if (prod && prod.nombre && k !== 'gpsfarma') avisarNombre(prod.nombre);
       } catch(_) { if (my === cmpReq) cmpState.res[k] = { prod: null, error: true }; }
       if (my === cmpReq) renderCmp();
     }));
@@ -1920,7 +1931,7 @@
     }
   }
 
-  async function handleCode(code){
+  async function handleCode(code, nombre){
     code = String(code).trim();
     if (navigator.vibrate) try { navigator.vibrate(80); } catch(e){}
     resetForm(); setEan(code);
@@ -1931,7 +1942,7 @@
       return;
     }
     setStatus('');
-    compareAll(code);
+    compareAll(code, nombre);
     sReq++; sGroups = []; $('cotoInfo').textContent = ''; renderCoto();
   }
   // Producto que ningún súper tiene: cargarlo a mano con su código
