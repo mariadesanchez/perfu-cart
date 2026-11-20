@@ -164,6 +164,14 @@
   .cmp-row .btn{padding:8px 12px;font-size:13px;border-radius:10px}
   .bestTag{display:inline-block;background:var(--tag);color:var(--tag-ink);font-family:"Figtree",sans-serif;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:2px}
   .cmp-name{font-size:14px;color:var(--muted);margin-top:2px}
+  .cmp-head{display:flex;align-items:center;gap:12px;margin:4px 0 8px}
+  .cmp-head .cmp-name{font-size:15px;color:var(--ink);font-weight:600}
+  .cthumb{width:72px;height:72px;flex:none;object-fit:contain;border-radius:12px;background:#fff;border:1px solid var(--line)}
+  .lthumb{width:44px;height:44px;flex:none;object-fit:contain;border-radius:8px;background:#fff;border:1px solid var(--line)}
+  .pthumb{width:30px;height:30px;flex:none;object-fit:contain;border-radius:6px;background:#fff}
+  .lthumb.vacia,.pthumb.vacia,.cthumb.vacia{background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C9B6C4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='2.5' width='8' height='4' rx='1'/%3E%3Cpath d='M9 6.5h6l1.5 3v11a1.5 1.5 0 0 1-1.5 1.5H9A1.5 1.5 0 0 1 7.5 20.5v-11z'/%3E%3Cpath d='M10 13h4'/%3E%3C/svg%3E") center/58% no-repeat}
+  .opt .ln{align-items:center}
+  .opt .ln span:first-of-type{flex:1;min-width:0}
   .pcard.na img{filter:grayscale(1);opacity:.6}
   .stock{display:inline-block;font-size:12px;font-weight:800;color:var(--muted);background:var(--line);padding:3px 8px;border-radius:999px}
   .cmp-row .stale{font-size:12px;color:var(--muted);font-weight:500}
@@ -1641,7 +1649,12 @@
     h.textContent = 'Este producto en cada tienda';
     box.appendChild(h);
     const anyName = (found[0] || entries.find(e => e.prod) || {}).prod?.nombre;
-    if (anyName) { const n = document.createElement('div'); n.className = 'cmp-name'; n.textContent = anyName; box.appendChild(n); }
+    if (anyName) {
+      const foto = (entries.find(e => e.prod && e.prod.imagen) || {}).prod;
+      const n = document.createElement('div'); n.className = 'cmp-head';
+      if (foto) n.appendChild(fotoMini(foto.imagen, 'cthumb'));
+      const s = document.createElement('div'); s.className = 'cmp-name'; s.textContent = anyName; n.appendChild(s); box.appendChild(n);
+    }
     const best = found.length ? Math.min(...found.map(e => effPrice(e.prod))) : null;
     const order = entries.slice().sort((a, b) => {
       const av = x => x.prod && !x.prod.sin_stock;
@@ -2007,6 +2020,7 @@
   const unitFor = (p, qty) => (p.precio_promo && qty >= lleva(p)) ? p.precio_promo : p.precio;
 
   async function runList(l, box){
+    let fotosNuevas = false;
     box.hidden = false;
     box.innerHTML = '<div class="hint"><span class="spinner"></span>Comparando precios… 0/' + l.items.length + '</div>';
     const keys = Object.keys(SUPERS);
@@ -2014,9 +2028,11 @@
     for (const it of l.items) {
       res[it.id] = {};
       await Promise.all(keys.map(async k => { res[it.id][k] = await findIn(k, it); }));
+      if (!it.img) { const conFoto = keys.map(k => res[it.id][k]).find(x => x && x.imagen); if (conFoto) { it.img = conFoto.imagen; fotosNuevas = true; } }
       done++;
       const h = box.querySelector('.hint'); if (h) h.innerHTML = '<span class="spinner"></span>Comparando precios… ' + done + '/' + l.items.length;
     }
+    if (fotosNuevas) { saveLists(); if (view === 'listas') renderBuilderItems(); }
     renderPlan(l, box, res);
   }
 
@@ -2059,6 +2075,7 @@
         ln.innerHTML = '<span></span><span></span>';
         ln.children[0].textContent = `${fmtQ(x.it.qty)} × ${x.p.nombre}`;
         ln.children[1].textContent = fmt(x.u * x.it.qty);
+        ln.prepend(fotoMini(x.p.imagen || x.it.img, 'pthumb'));
         d.appendChild(ln);
       });
       o1.appendChild(d);
@@ -2266,9 +2283,11 @@
       box.appendChild(alts);
     });
   }
+  const fotoMini = (src, cls) => { const im = document.createElement('img'); im.className = cls; im.alt = ''; im.loading = 'lazy'; im.referrerPolicy = 'no-referrer'; if (src) im.src = src; else im.classList.add('vacia'); im.onerror = () => { im.removeAttribute('src'); im.classList.add('vacia'); }; return im; };
   function renderListItem(l, it, ul){
       const li = document.createElement('li');
       li.innerHTML = `<span></span><div class="mini-step"><button type="button" data-d="-1" aria-label="Menos">−</button><b>${fmtQ(it.qty)}</b><button type="button" data-d="1" aria-label="Más">+</button></div><button type="button" class="iconbtn" aria-label="Quitar">✕</button>`;
+      li.prepend(fotoMini(it.img, 'lthumb'));
       const sp = li.querySelector('span'); sp.textContent = it.name;
       const u = itemUnit(it);
       const lp = document.createElement('span'); lp.className = 'lp';
