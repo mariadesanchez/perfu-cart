@@ -2272,12 +2272,15 @@
     [...$('bList').options].forEach(o => { const x = lists.find(y => y.id === o.value); if (x) o.textContent = `${x.name} (${x.items.length})`; });
     $('bListTitle').textContent = l.items.length ? `Productos (${l.items.length})` : 'Productos'; $('lName').textContent = l.name;
     if (!l.items.length) { const li = document.createElement('li'); li.innerHTML = '<span style="color:var(--muted)">Tu lista está vacía. Tocá “+ Agregar productos” para buscarlos.</span>'; ul.appendChild(li); }
-    const rub = it => (it.rubro || '').trim() || 'Otros';
+    // Agrupados por tienda, en el orden de las tiendas de la app
+    const ORDEN = Object.values(SUPERS);
+    const rub = it => (it.sup || it.statusSup || '').trim() || 'Sin tienda';
     const byName = (a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
     const groups = {};
     l.items.forEach(it => (groups[rub(it)] = groups[rub(it)] || []).push(it));
-    const keys = Object.keys(groups).sort((a, b) => (a === 'Otros') - (b === 'Otros') || a.localeCompare(b, 'es', { sensitivity: 'base' }));
-    const showHeads = !(keys.length === 1 && keys[0] === 'Otros');
+    const pos = k => { const i = ORDEN.indexOf(k); return i < 0 ? 99 : i; };
+    const keys = Object.keys(groups).sort((a, b) => pos(a) - pos(b) || a.localeCompare(b, 'es', { sensitivity: 'base' }));
+    const showHeads = true;
     keys.forEach(k => {
       if (showHeads) { const h = document.createElement('li'); h.className = 'rubro-h'; h.textContent = k; const c = document.createElement('small'); c.textContent = '(' + groups[k].length + ')'; h.appendChild(c); ul.appendChild(h); }
       groups[k].sort(byName).forEach(it => renderListItem(l, it, ul));
@@ -2331,7 +2334,6 @@
       if (u) {
         lp.innerHTML = `${fmtQ(it.qty)} × ${u !== it.price ? '<em></em>' : fmt(u)} = <b>${fmt(u * it.qty)}</b>`;
         if (u !== it.price) lp.querySelector('em').textContent = fmt(u) + ' (' + (it.promo || 'oferta').split(' · ')[0] + ')';
-        if (it.sup) lp.appendChild(document.createTextNode(' · ' + it.sup));
       } else lp.textContent = itemStatus(it) ? 'No incorporado a la lista: no suma al total' : 'Sin precio: tocá Actualizar';
       sp.appendChild(lp);
       const st = itemStatus(it), S = it.statusSup || it.sup || 'esta tienda';
