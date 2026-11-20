@@ -241,6 +241,41 @@
   body:not([data-view="inicio"]) .wrap{padding-top:70px}
   .toast{bottom:calc(92px + env(safe-area-inset-bottom))!important}
   #cotoCard.isEmpty{display:none!important}
+  #listsCard,#bUpd{display:none!important}
+  body:not(.gated) .logo{width:min(70%, 270px)}
+  body:not(.gated) .hero h1{font-size:24px;margin-top:8px}
+  #listBtn{display:none!important}
+  .actions-hero{margin-top:16px}
+  .steps{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;counter-reset:st;max-width:420px}
+  .steps li{counter-increment:st;display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.95);font-size:15px}
+  .steps li::before{content:counter(st);flex:none;width:26px;height:26px;border-radius:50%;background:var(--tag);color:#1B2140;font-weight:800;display:grid;place-items:center;font-size:14px}
+  .lhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .lhead-t{display:flex;flex-direction:column;min-width:0}
+  .lhead-t small{color:var(--muted);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .lhead-t b{font-family:var(--display);font-size:24px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lmenu-btn{flex:none;padding:9px 12px;font-size:14px}
+  .lmenu{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--bg)}
+  .lmenu[hidden]{display:none}
+  .lmenu select{width:100%;font-size:15px;padding:11px 10px;margin-bottom:10px}
+  .lmenu-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .lmenu-acts .btn{padding:10px;font-size:14px;justify-content:center;text-align:center}
+  .lmenu-acts .lm-share{display:flex;align-items:center;gap:6px;text-decoration:none}
+  .lmenu-acts .lm-share svg{width:18px;height:18px}
+  .add-more{margin-top:12px;border-style:dashed}
+  .sgrid{display:grid;gap:10px}
+  .scard{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+  .scard img{width:64px;height:64px;object-fit:contain;border-radius:10px;background:#fff}
+  .scard .sn{font-weight:700;line-height:1.25}
+  .scard .sb{color:var(--muted);font-size:13px}
+  .scard .sbest{margin-top:4px;font-size:15px}
+  .scard .sbest b{font-size:19px;color:var(--price-hot)}
+  .scard .sstores{display:grid;grid-template-columns:1fr auto;gap:1px 12px;margin-top:8px;font-size:13px;color:var(--muted)}
+  .scard .sstores span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums}
+  .scard .sstores span.best{color:var(--ink);font-weight:800}
+  .scard .sacts{grid-column:1/-1;display:flex;gap:8px}
+  .scard .sacts .btn{flex:1;padding:10px;font-size:14px}
+  .scard .off{position:static;display:inline-block;margin-left:6px;vertical-align:middle}
+  .cmp-add{margin-top:12px}
   .sheet{position:fixed;inset:0;z-index:40}
   .sheet-bg{position:absolute;inset:0;background:rgba(27,33,64,.45);animation:fadein .2s ease}
   .sheet-panel{position:absolute;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;background:var(--card);border-radius:24px 24px 0 0;
@@ -535,7 +570,7 @@
       </g>
     </svg>
     <h1>Tu perfumería, al mejor precio</h1>
-    <p>Perfumes, maquillaje y cuidado personal. Escaneá el código de barras y compará precios y ofertas en Farmaonline, Farmacity, Simplicity, Pigmento y GPS Farma.</p>
+    <ol class="steps"><li><b>Buscá</b> o escaneá un producto</li><li><b>Sumalo</b> a tu lista</li><li><b>Compará</b> y pasá el carrito a cada tienda</li></ol>
     <div class="gate" id="gate">
       <div class="gate-h">Ingresá a tu cuenta</div>
       <div class="gate-p">Tus listas, las ofertas del día y la comparación de precios, en el celu y en la compu.</div>
@@ -561,7 +596,7 @@
       </button>
       <button class="bigbtn secondary listbtn" id="listBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>
-        <span><b>Tu lista</b><small>Armá tu listado para futuras compras</small></span>
+        <span><b>Mi lista</b><small>Armá tu listado para futuras compras</small></span>
       </button>
     </div>
   </div>
@@ -609,23 +644,33 @@
   </section>
 
   <section class="card" id="builder" data-view="listas">
-    <h2><span>Tu lista</span></h2>
-    <div class="hint" style="margin-top:-6px">Buscá productos, agregalos y quedan guardados con su código de barras para comparar exacto en tus próximas compras.</div>
-    <label for="bList">Lista</label>
-    <div class="row">
-      <select id="bList" style="flex:1;font-size:15px;padding:11px 10px"></select>
-      <button type="button" class="btn btn-ghost" id="bRename" style="padding:10px 12px;font-size:14px" aria-label="Renombrar lista">✎</button>
-      <button type="button" class="btn btn-ghost" id="bNew" style="padding:10px 12px;font-size:14px">+ Nueva</button>
+    <div class="lhead">
+      <div class="lhead-t"><small>Mi lista</small><b id="lName">Mi lista</b></div>
+      <button type="button" class="btn btn-ghost lmenu-btn" id="lMenuBtn" aria-expanded="false" aria-controls="lMenu">Mis listas ▾</button>
     </div>
-    <button type="button" class="suggest del-link" id="bDel">🗑 Eliminar esta lista</button>
-    <form class="row" id="bRenameForm" hidden autocomplete="off" style="margin-top:8px">
-      <input type="text" id="bRenameName" placeholder="Nuevo nombre" style="flex:1" maxlength="40" aria-label="Nuevo nombre de la lista">
-      <button class="btn btn-primary" type="submit" style="padding:10px 14px">Guardar</button>
-    </form>
+    <div class="lmenu" id="lMenu" hidden>
+      <label for="bList">Cambiar de lista</label>
+      <select id="bList"></select>
+      <div class="lmenu-acts">
+        <button type="button" class="btn btn-ghost" id="bNew">+ Nueva lista</button>
+        <button type="button" class="btn btn-ghost" id="bRename">✎ Renombrar</button>
+        <a class="btn btn-ghost lm-share" id="bShare" target="_blank" rel="noopener" href="#">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3.2A12.7 12.7 0 0 0 5.1 22.4L3.3 28.8l6.6-1.7A12.7 12.7 0 1 0 16 3.2zm0 23.2c-2 0-3.9-.5-5.6-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.5 10.5 0 1 1 16 26.4zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6.3-.5c.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.8s1.2 3.2 1.4 3.4c.2.2 2.4 3.6 5.7 5 .8.4 1.4.6 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.7.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+      Compartir
+    </a>
+        <button type="button" class="btn btn-ghost del-btn" id="bDel">🗑 Eliminar</button>
+      </div>
     <form class="row" id="bNewForm" hidden autocomplete="off" style="margin-top:8px">
       <input type="text" id="bNewName" placeholder="Nombre de la nueva lista" style="flex:1" maxlength="40">
       <button class="btn btn-primary" type="submit" style="padding:10px 14px">Crear</button>
     </form>
+    <form class="row" id="bRenameForm" hidden autocomplete="off" style="margin-top:8px">
+      <input type="text" id="bRenameName" placeholder="Nuevo nombre" style="flex:1" maxlength="40" aria-label="Nuevo nombre de la lista">
+      <button class="btn btn-primary" type="submit" style="padding:10px 14px">Guardar</button>
+    </form>
+    </div>
+    <button type="button" class="btn btn-ghost w100 add-more" id="bAddMore">+ Agregar productos</button>
+    <div hidden>
     <label>Buscar en</label>
     <div class="seg" id="bSuper"></div>
     <form class="row" id="bForm" autocomplete="off">
@@ -634,6 +679,7 @@
     </form>
     <div class="hint" id="bInfo"></div>
     <div class="pgrid" id="bResults" style="margin-top:8px"></div>
+    </div>
     <div class="sub" id="bListTitle">En tu lista</div>
     <div class="upd" id="bUpd" hidden>
       <div class="upd-t" id="bUpdText"></div>
@@ -641,30 +687,26 @@
     </div>
     <ul class="lst-items" id="bItems"></ul>
     <div class="lsum" id="bSum" hidden></div>
-    <button type="button" class="btn btn-primary w100" id="bRun" style="margin-top:12px;font-size:16px;padding:15px">Compará precios</button>
+    <button type="button" class="btn btn-primary w100" id="bRun" style="margin-top:12px;font-size:17px;padding:16px">Comparar precios</button>
     <div class="plan" id="bPlan" hidden></div>
-    <a class="btn w100 wa-btn" id="bShare" target="_blank" rel="noopener" href="#">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3.2A12.7 12.7 0 0 0 5.1 22.4L3.3 28.8l6.6-1.7A12.7 12.7 0 1 0 16 3.2zm0 23.2c-2 0-3.9-.5-5.6-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.5 10.5 0 1 1 16 26.4zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6.3-.5c.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.8s1.2 3.2 1.4 3.4c.2.2 2.4 3.6 5.7 5 .8.4 1.4.6 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.7.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
-      Compartir
-    </a>
-    <button type="button" class="btn w100 gs-btn" id="bSheets">
+    <div class="hint">☁️ Tu lista se guarda en tu cuenta: la ves igual en el celular y en la compu.</div>
+    <div hidden><button type="button" class="btn w100 gs-btn" id="bSheets">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm4 18H6V4h7v5h5zM8 12h8v6H8zm1.5 1.5v1.2h2v-1.2zm3 0v1.2h2v-1.2zm-3 2.3v1.2h2v-1.2zm3 0v1.2h2v-1.2z"/></svg>
       Copiar para Google Sheets
-    </button>
-    <div class="hint">☁️ Tu lista se guarda en tu cuenta: la ves igual en el celular y en la compu.</div>
+    </button></div>
   </section>
 
   <section class="card" id="prodCard" data-view="inicio">
     <h2><span id="prodTitle">Buscá un producto</span></h2>
-    <div class="hint" style="margin-top:-6px">Escaneá el código, escribí sus números o buscá por nombre.</div>
-    <div class="seg" id="superSel" role="tablist" aria-label="Tienda" style="margin-top:12px">
+    <div class="hint" style="margin-top:-6px">Escribí el nombre o el código de barras: buscamos en las 5 tiendas a la vez.</div>
+    <div class="seg" id="superSel" role="tablist" aria-label="Tienda" style="margin-top:12px" hidden>
       <button type="button" role="tab" data-super="farmaonline">Farmaonline</button>
       <button type="button" role="tab" data-super="farmacity">Farmacity</button>
       <button type="button" role="tab" data-super="simplicity">Simplicity</button>
       <button type="button" role="tab" data-super="pigmento">Pigmento</button>
       <button type="button" role="tab" data-super="gpsfarma">GPS Farma</button>
     </div>
-    <div class="hint" style="margin:-4px 0 8px">Buscando en <b id="cotoSuc"></b></div>
+    <div class="hint" style="margin:-4px 0 8px" hidden>Buscando en <b id="cotoSuc"></b></div>
     <form id="cotoForm" class="row" autocomplete="off">
       <input type="text" id="cotoQ" placeholder="Ej: perfume, labial o código de barras" enterkeyhint="search" style="flex:1" aria-label="Nombre o código de barras">
       <button class="btn btn-primary" type="submit" style="padding:12px 16px">Buscar</button>
@@ -685,7 +727,7 @@
     <div class="row" style="align-items:center;justify-content:space-between">
       <span class="hint" id="cotoInfo" style="margin:0"></span>
       <select id="cotoSort" aria-label="Ordenar">
-        <option value="rel">Ofertas primero</option>
+        <option value="rel">Más relevantes</option>
         <option value="asc">Menor precio</option>
         <option value="desc">Mayor precio</option>
       </select>
@@ -816,15 +858,15 @@
 </div>
 
 <nav class="tabbar" id="tabbar" aria-label="Secciones">
-  <button type="button" data-go="inicio" aria-label="Inicio">
+  <button type="button" data-go="inicio" aria-label="Buscar">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M16.5 8v8"/></svg>
-    <span>Inicio</span></button>
+    <span>Buscar</span></button>
   <button type="button" data-go="ofertas" aria-label="Ofertas">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.6"/></svg>
     <span>Ofertas</span><b class="tab-badge" id="tabOfertas" hidden></b></button>
-  <button type="button" data-go="listas" aria-label="Listas">
+  <button type="button" data-go="listas" aria-label="Mi lista">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>
-    <span>Listas</span><b class="tab-badge" id="tabListas">0</b></button>
+    <span>Mi lista</span><b class="tab-badge" id="tabListas">0</b></button>
   <button type="button" data-go="cuenta" aria-label="Mi cuenta">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
     <span>Mi cuenta</span></button>
@@ -1384,20 +1426,86 @@
     openSheet();
     setTimeout(() => $('price').focus(), 300);
   }
+  // ---------- Buscar en las 5 tiendas a la vez (agrupado por código de barras) ----------
+  let sGroups = [], sReq = 0;
+  async function searchAll(q){
+    const my = ++sReq; sGroups = []; cotoMain = []; cotoSimilar = [];
+    const keys = Object.keys(SUPERS); let listas = 0;
+    $('cotoInfo').innerHTML = '<span class="spinner"></span>Buscando en las ' + keys.length + ' tiendas…';
+    renderCoto();
+    await Promise.all(keys.map(async k => {
+      try {
+        const r = await fetch('/api/vtex?tienda=' + k + '&' + new URLSearchParams({ q, limite: '12' }).toString());
+        const d = r.ok ? await r.json() : {};
+        if (my !== sReq) return;
+        (d.productos || []).forEach((pr, i) => {
+          const key = pr.ean || ('n:' + String(pr.nombre || '').toLowerCase());
+          let g = sGroups.find(x => x.key === key);
+          if (!g) { g = { key, ean: pr.ean || '', nombre: pr.nombre, marca: pr.marca || '', imagen: pr.imagen || '', por: {}, rank: i }; sGroups.push(g); }
+          if (!g.imagen && pr.imagen) g.imagen = pr.imagen;
+          g.rank = Math.min(g.rank, i); g.por[k] = pr;
+        });
+      } catch(_) {}
+      if (my !== sReq) return;
+      listas++;
+      if (listas < keys.length) $('cotoInfo').innerHTML = '<span class="spinner"></span>Buscando… ' + listas + ' de ' + keys.length + ' tiendas';
+      renderCoto();
+    }));
+    if (my !== sReq) return;
+    const n = sGroups.filter(g => mejorDe(g)).length;
+    $('cotoInfo').textContent = n ? n + (n === 1 ? ' producto' : ' productos') + '. Te mostramos el precio más bajo; tocá “Comparar” para verlo en cada tienda.'
+      : 'No encontré productos con ese nombre. Probá con otras palabras o con el código de barras.';
+    renderCoto();
+  }
+  function mejorDe(g){
+    let b = null;
+    Object.entries(g.por).forEach(([k, pr]) => { if (pr.sin_stock) return; const v = pr.precio_promo || pr.precio; if (v && (!b || v < b.v)) b = { k, p: pr, v }; });
+    return b;
+  }
+  function addToMyList(pr, k){
+    const l = ensureList(), cur = pr.ean && l.items.find(i => i.ean === pr.ean);
+    if (cur) { l.items = l.items.filter(i => i !== cur); toast('Lo sacaste de ' + l.name); }
+    else {
+      const of = !!(pr.precio_promo && !pr.sin_stock), n = of ? lleva(pr) : 1;
+      l.items.push({ id: uid(), name: pr.nombre, ean: pr.ean || '', qty: n, price: pr.sin_stock ? null : pr.precio, listPrice: pr.sin_stock ? null : (pr.precio_lista || null),
+        promoPrice: of ? pr.precio_promo : null, lleva: of ? lleva(pr) : 1, promo: pr.promo || '', sup: SUPERS[k], rubro: pr.rubro || '',
+        status: pr.sin_stock ? 'nostock' : 'ok', statusSup: SUPERS[k], img: pr.imagen || '', link: pr.link || '' });
+      const s = listTotals(l);
+      toast('Agregado a ' + l.name + ' · ' + s.n + (s.n === 1 ? ' producto' : ' productos'));
+    }
+    saveLists(); renderLists(); if (view === 'listas') renderBuilder();
+  }
+  function searchCard(g){
+    const b = mejorDe(g), l = ensureList(), inList = g.ean && l.items.find(i => i.ean === g.ean);
+    const el = document.createElement('div'); el.className = 'scard';
+    el.innerHTML = `<img alt="" loading="lazy"><div style="min-width:0"><div class="sn"></div><div class="sb"></div>
+      <div class="sbest"><b>${fmt(b.v)}</b> en <span class="st"></span></div><div class="sstores"></div></div>
+      <div class="sacts"><button type="button" class="btn ${inList ? 'btn-ghost added' : 'btn-primary'}" data-a="add"></button>${g.ean ? '<button type="button" class="btn btn-ghost" data-a="cmp">Comparar</button>' : ''}</div>`;
+    const img = el.querySelector('img'); if (g.imagen) img.src = g.imagen; else img.style.visibility = 'hidden';
+    img.onerror = () => { img.style.visibility = 'hidden'; };
+    el.querySelector('.sn').textContent = g.nombre;
+    el.querySelector('.sb').textContent = g.marca;
+    el.querySelector('.st').textContent = SUPERS[b.k];
+    if (b.p.precio_promo) { const o = document.createElement('span'); o.className = 'off'; o.textContent = b.p.promo || 'Oferta'; el.querySelector('.sbest').appendChild(o); }
+    const ss = el.querySelector('.sstores');
+    Object.entries(g.por).filter(([, pr]) => !pr.sin_stock && (pr.precio_promo || pr.precio)).map(([k, pr]) => ({ k, v: pr.precio_promo || pr.precio }))
+      .sort((x, y) => x.v - y.v).forEach((x, i) => { [SUPERS[x.k], fmt(x.v)].forEach(txt => { const s = document.createElement('span'); if (!i) s.className = 'best'; s.textContent = txt; ss.appendChild(s); }); });
+    const ab = el.querySelector('[data-a=add]'); ab.textContent = inList ? '✓ En ' + l.name : '+ A mi lista';
+    ab.addEventListener('click', () => { addToMyList(b.p, b.k); renderCoto(); });
+    const cb = el.querySelector('[data-a=cmp]');
+    if (cb) cb.addEventListener('click', () => { handleCode(g.ean); setTimeout(() => $('cotoCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); });
+    return el;
+  }
   function renderCoto(){
     const box = $('cotoList'); box.innerHTML = '';
     const sort = $('cotoSort').value;
-    const eff = p => p.precio_promo || p.precio;
-    const offer = p => (p.precio_promo && !p.sin_stock) ? 1 : 0;
-    const sorted = cotoSimilar.slice().sort((a, b) => (Number(!!a.sin_stock) - Number(!!b.sin_stock)) || (sort === 'asc' ? eff(a) - eff(b) : sort === 'desc' ? eff(b) - eff(a) : (offer(b) - offer(a)) || (a._i - b._i)));
-    if (cotoMain.length && !cmpState) {
-      const h = document.createElement('div'); h.className = 'sub'; h.textContent = 'Este producto'; box.appendChild(h);
-      const g = document.createElement('div'); g.className = 'pgrid'; cotoMain.forEach(p => g.appendChild(productCard(p, true, cfg.super))); box.appendChild(g);
-    }
-    if (sorted.length) {
-      const h = document.createElement('div'); h.className = 'sub'; h.textContent = (cotoMain.length || cmpState) ? 'Otros parecidos en ' + SUPERS[cfg.super] : 'Resultados'; box.appendChild(h);
-      const g = document.createElement('div'); g.className = 'pgrid'; sorted.forEach(p => g.appendChild(productCard(p, false, cfg.super))); box.appendChild(g);
-    }
+    const gs = sGroups.filter(g => mejorDe(g));
+    gs.sort((a, b) => sort === 'asc' ? mejorDe(a).v - mejorDe(b).v : (Object.keys(b.por).length - Object.keys(a.por).length) || (a.rank - b.rank));
+    if (!gs.length) return;
+    if (cmpState) { const h = document.createElement('div'); h.className = 'sub'; h.textContent = 'Otros resultados'; box.appendChild(h); }
+    const grid = document.createElement('div'); grid.className = 'sgrid';
+    gs.slice(0, 30).forEach(g => grid.appendChild(searchCard(g)));
+    box.appendChild(grid);
   }
   $('cotoForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -1407,7 +1515,7 @@
       if (![8, 12, 13, 14].includes(digits.length) || !validEan(digits)) { setStatus('Ese código no es válido: revisá los números (8 o 13 dígitos).', 'err'); return; }
       handleCode(digits); return;
     }
-    setStatus(''); cmpReq++; cmpState = null; renderCmp(); cotoSearch(v, '');
+    setStatus(''); cmpReq++; cmpState = null; renderCmp(); searchAll(v);
     $('cotoQ').blur();
   });
   $('cotoSort').addEventListener('change', renderCoto);
@@ -1568,7 +1676,7 @@
         row.innerHTML = `
           <div style="min-width:0"><div class="cs"></div><div class="cx"></div></div>
           <div class="cp ${p.precio_promo ? 'hot' : ''}">${fmt(ep)}${p.precio_promo ? `<s>${fmt(p.precio)}</s>` : ''}${diff > 0 ? `<small>+${fmt(diff)}</small>` : ''}</div>
-          <button type="button" class="btn btn-primary">Agregar</button>`;
+          <div></div>`;
         const cs = row.querySelector('.cs'); cs.textContent = name;
         if (isBest) { const b = document.createElement('span'); b.className = 'bestTag'; b.textContent = 'Más barato'; cs.appendChild(b); }
         const cx = row.querySelector('.cx');
@@ -1578,11 +1686,18 @@
         if (p.promo) cx.querySelector('b').textContent = p.promo + (p.promo_condicion ? '. ' + p.promo_condicion : '');
         if (p.nota) cx.appendChild(document.createTextNode((p.promo ? ' · ' : '') + p.nota));
         if (!p.promo && !p.nota && e.k === 'coto') cx.textContent = 'Sucursal ' + (cfg.suc || '200');
-        row.querySelector('.btn').addEventListener('click', () => choose(p, undefined, e.k));
       }
       list.appendChild(row);
     });
     box.appendChild(list);
+    if (found.length) {
+      const b = found.map(e => ({ k: e.k, p: e.prod, v: effPrice(e.prod) })).sort((x, y) => x.v - y.v)[0];
+      const l = ensureList(), inList = l.items.find(i => i.ean === cmpState.ean);
+      const ab = document.createElement('button'); ab.type = 'button'; ab.className = 'btn w100 cmp-add ' + (inList ? 'btn-ghost' : 'btn-primary');
+      ab.textContent = inList ? '✓ Ya está en ' + l.name : '+ Agregar a ' + l.name;
+      ab.addEventListener('click', () => { addToMyList(b.p, b.k); renderCmp(); renderCoto(); });
+      box.appendChild(ab);
+    }
     if (!loading) {
       const note = document.createElement('div'); note.className = 'hint';
       note.textContent = found.length
@@ -1610,7 +1725,7 @@
     }
     setStatus('');
     compareAll(code);
-    cotoSearch(catalog[code] ? simplify(catalog[code].name) : '', code);
+    sReq++; sGroups = []; $('cotoInfo').textContent = ''; renderCoto();
   }
   // Producto que ningún súper tiene: cargarlo a mano con su código
   async function manualForCode(code){
@@ -2018,12 +2133,12 @@
     if (!lists.find(l => l.id === bListId)) bListId = lists[0].id;
     return lists.find(l => l.id === bListId);
   }
-  function openBuilder(){
-    go('listas');
-    setTimeout(() => $('bQ').focus(), 350);
-  }
+  function openBuilder(){ go('listas'); }
+  const cerrarMenuListas = () => { $('lMenu').hidden = true; $('lMenuBtn').setAttribute('aria-expanded', 'false'); };
+  $('lMenuBtn').addEventListener('click', () => { const m = $('lMenu'); m.hidden = !m.hidden; $('lMenuBtn').setAttribute('aria-expanded', String(!m.hidden)); });
+  $('bAddMore').addEventListener('click', () => { go('inicio'); setTimeout(() => { $('prodCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('cotoQ').focus(); }, 300); });
   $('listBtn').addEventListener('click', openBuilder);
-  $('bList').addEventListener('change', () => { bListId = $('bList').value; $('bPlan').hidden = true; $('bPlan').innerHTML = ''; renderBuilder(); });
+  $('bList').addEventListener('change', () => { bListId = $('bList').value; cerrarMenuListas(); $('bPlan').hidden = true; $('bPlan').innerHTML = ''; renderBuilder(); });
   $('bRename').addEventListener('click', () => {
     const f = $('bRenameForm'); f.hidden = !f.hidden;
     if (!f.hidden) { $('bRenameName').value = ensureList().name; $('bRenameName').focus(); $('bRenameName').select(); }
@@ -2031,7 +2146,7 @@
   $('bRenameForm').addEventListener('submit', e => {
     e.preventDefault();
     const v = $('bRenameName').value.trim(); if (!v) return;
-    ensureList().name = v.slice(0, 40); saveLists(); $('bRenameForm').hidden = true;
+    ensureList().name = v.slice(0, 40); saveLists(); $('bRenameForm').hidden = true; cerrarMenuListas();
     renderBuilder(); renderLists(); toast('Lista renombrada');
   });
   $('bDel').addEventListener('click', () => { const l = lists.find(x => x.id === bListId) || ensureList(); deleteList(l); });
@@ -2039,7 +2154,7 @@
   $('bNewForm').addEventListener('submit', e => {
     e.preventDefault();
     const l = { id: uid(), name: $('bNewName').value.trim() || 'Mi lista', items: [] };
-    lists.unshift(l); bListId = l.id; saveLists(); $('bNewName').value = ''; $('bNewForm').hidden = true;
+    lists.unshift(l); bListId = l.id; saveLists(); $('bNewName').value = ''; $('bNewForm').hidden = true; cerrarMenuListas();
     renderBuilder(); renderLists(); toast('Lista creada');
   });
   $('bForm').addEventListener('submit', e => { e.preventDefault(); builderSearch(); });
@@ -2101,8 +2216,8 @@
   function renderBuilderItems(){
     const l = ensureList(); const ul = $('bItems'); ul.innerHTML = '';
     [...$('bList').options].forEach(o => { const x = lists.find(y => y.id === o.value); if (x) o.textContent = `${x.name} (${x.items.length})`; });
-    $('bListTitle').textContent = `En tu lista “${l.name}” (${l.items.length})`;
-    if (!l.items.length) { const li = document.createElement('li'); li.innerHTML = '<span style="color:var(--muted)">Todavía no agregaste productos.</span>'; ul.appendChild(li); }
+    $('bListTitle').textContent = l.items.length ? `Productos (${l.items.length})` : 'Productos'; $('lName').textContent = l.name;
+    if (!l.items.length) { const li = document.createElement('li'); li.innerHTML = '<span style="color:var(--muted)">Tu lista está vacía. Tocá “+ Agregar productos” para buscarlos.</span>'; ul.appendChild(li); }
     const rub = it => (it.rubro || '').trim() || 'Otros';
     const byName = (a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
     const groups = {};
