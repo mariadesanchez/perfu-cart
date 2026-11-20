@@ -2299,8 +2299,31 @@
     });
     $('bRun').disabled = !l.items.length; updateShare(); renderUpdBar(l); if (window.__gsReady) renderGs();
     renderListSummary(l);
+    completarFotos(l);
   }
   function itemStatus(it){ return it.status || (it.noStock ? 'nostock' : (it.price ? 'ok' : '')); }
+  // Fotos que faltan (productos agregados antes de que se guardaran): se buscan solas, de a 4
+  let fotosEnCurso = false; const fotosIntentadas = new Set();
+  async function completarFotos(l){
+    if (fotosEnCurso) return;
+    const falta = l.items.filter(it => !it.img && it.ean && !fotosIntentadas.has(it.ean));
+    if (!falta.length) return;
+    fotosEnCurso = true;
+    const porNombre = Object.fromEntries(Object.entries(SUPERS).map(([k, v]) => [v, k]));
+    let cambio = false;
+    for (let i = 0; i < falta.length; i += 4) {
+      await Promise.all(falta.slice(i, i + 4).map(async it => {
+        fotosIntentadas.add(it.ean);
+        const ks = [porNombre[it.sup], porNombre[it.statusSup], ...Object.keys(SUPERS)].filter((k, j, a) => k && a.indexOf(k) === j).slice(0, 3);
+        for (const k of ks) {
+          try { const p = await fetchExact(k, it.ean); if (p && p.imagen) { it.img = p.imagen; cambio = true; return; } } catch(_) {}
+        }
+      }));
+      if (cambio && view === 'listas') renderBuilderItems();
+    }
+    fotosEnCurso = false;
+    if (cambio) { saveLists(); if (view === 'listas') renderBuilderItems(); }
+  }
   async function fetchExact(k, ean){
     const params = new URLSearchParams({ ean, sucursal: cfg.suc || '200' });
     const url = k === 'coto' ? '/api/coto?' : '/api/vtex?tienda=' + k + '&';
