@@ -3171,6 +3171,22 @@
     try { await nuevoNonce(); gisListo = true; ['gateLogin'].map($).concat([...document.querySelectorAll('[data-login]')]).forEach(cubrir); } catch(_) {}
   }
   (function esperarGis(n){ if (window.google && google.accounts && google.accounts.id && sb) initGis(); else if (n < 40) setTimeout(() => esperarGis(n + 1), 250); })(0);
+  // ---------- actualizar sola cuando se publica una versión nueva ----------
+  (function(){
+    let tag = null;
+    const leer = () => fetch('/', { method: 'HEAD', cache: 'no-store' }).then(r => r.headers.get('etag')).catch(() => null);
+    leer().then(t => { tag = t; });
+    let ultimo = Date.now();
+    async function revisar(){
+      if (!tag || Date.now() - ultimo < 30000) return;
+      ultimo = Date.now();
+      const t = await leer();
+      if (t && t !== tag) { toast('Hay una versión nueva de la app: actualizando…'); setTimeout(() => location.reload(), 1200); }
+    }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') revisar(); });
+    window.addEventListener('focus', revisar);
+    setInterval(revisar, 5 * 60 * 1000);
+  })();
   async function logout(){
     if (!confirm('¿Cerrar sesión? Tus listas quedan guardadas en tu cuenta.')) return;
     await subirListas();
