@@ -2358,10 +2358,11 @@
             if (otros.length) {
               const c = document.createElement('div'); c.className = 'ln-cmp';
               // El precio más conveniente en verde (el de esta fila o el de otra tienda); los demás en negrita
-              const min = Math.min(mio, otros[0].v);
-              if (mio <= min + 0.5) ln.querySelector('.lnp').classList.add('mejor');
+              // Un empate (o centavos de diferencia) no cuenta: en verde va la tienda elegida, salvo que otra sea de verdad más barata
+              const otraMasBarata = otros[0].v < mio - 1;
+              if (!otraMasBarata) ln.querySelector('.lnp').classList.add('mejor');
               c.innerHTML = '<div></div>';
-              otros.forEach((o, i) => { if (i) c.children[0].append(' · '); const s = document.createElement('span'); s.className = o.v <= min + 0.5 ? 'mejor' : 'caro'; s.textContent = SUPERS[o.k] + '\u00a0' + fmt(o.v).replace(' ', '\u00a0'); c.children[0].appendChild(s); });
+              otros.forEach((o, i) => { if (i) c.children[0].append(' · '); const s = document.createElement('span'); s.className = otraMasBarata && o.v <= otros[0].v + 0.5 ? 'mejor' : 'caro'; s.textContent = SUPERS[o.k] + '\u00a0' + fmt(o.v).replace(' ', '\u00a0'); c.children[0].appendChild(s); });
               ln.appendChild(c);
             }
           }
