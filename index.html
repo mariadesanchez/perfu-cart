@@ -493,7 +493,8 @@
   .pl-opt:hover{border-color:#14935A}
   .grp-sep{margin:16px 0 4px;padding-top:12px;border-top:2px dashed var(--line);font-weight:800;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
   .opt .grp .ln.tachado{opacity:.75}
-  .opt .grp .ln.tachado .lnn,.opt .grp .ln.tachado .lnp{text-decoration:line-through;color:var(--muted)}
+  .opt .grp .ln.tachado .lnn,.opt .grp .ln.tachado .lnp{text-decoration:line-through;text-decoration-color:var(--danger);text-decoration-thickness:2px;color:var(--muted)}
+  .ln-sec.tach{color:var(--danger);background:color-mix(in srgb, var(--danger) 10%, var(--card));border:1.5px solid color-mix(in srgb, var(--danger) 35%, transparent);border-radius:10px;padding:6px 10px;margin-top:12px;display:inline-block}
   .opt .ln .lnq{grid-area:s;font-size:13px;color:var(--muted);font-weight:600}
   .ln-cmp{grid-area:c;font-size:12px;color:var(--muted);line-height:1.35;margin-top:1px}
   .ln-cmp span{white-space:nowrap}
@@ -2591,7 +2592,7 @@
           if (conOf.length && sinOf.length && ix === 0) titulo('🔥 En oferta (' + conOf.length + ')', 'on');
           if (conOf.length && sinOf.length && ix === conOf.length) titulo('Sin oferta (' + sinOf.length + ')', 'off');
           if (x.tachado) {
-            if (ix === conOf.length + sinOf.length) titulo('Conviene en otra tienda (' + tach.length + ')', 'off');
+            if (ix === conOf.length + sinOf.length) titulo('Conviene en otra tienda (' + tach.length + ')', 'tach');
             const lt = document.createElement('div'); lt.className = 'ln tachado';
             lt.innerHTML = '<span class="lnn"></span><span class="lnq"></span><span class="lnp"></span><div class="ln-cmp"><div></div></div>';
             lt.querySelector('.lnn').textContent = x.p.nombre || x.it.name;
