@@ -2403,7 +2403,8 @@
   function pintarPacks(l, box, combo, ctx){
     const packs = l.items.map(it => ({ it, pk: it.ean && packDe(it.name) })).filter(x => x.pk).slice(0, 5);
     if (!packs.length) return;
-    const mio = new Map(); combo.forEach((g, k) => g.lines.forEach(x => mio.set(x.it.id, { k, u: x.u, p: x.p })));
+    // precio del pack en esta app (si ya se cambió por sueltos de la otra app, el de la fila tachada)
+    const mio = new Map(); combo.forEach((g, k) => { if (g.otra) return; g.lines.forEach(x => mio.set(x.it.id, { k, u: x.u, p: x.p })); });
     const cont = document.createElement('div'); cont.className = 'cruce packs';
     cont.innerHTML = '<div class="cruce-h"><small><span class="spinner"></span>Revisando si conviene comprar tus packs por unidad…</small></div>';
     box.appendChild(cont);
