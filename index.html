@@ -485,6 +485,7 @@
   .cruce-t .a a,.cruce-app{color:var(--accent-deep, var(--accent));font-weight:700;text-decoration:none}
   .cruce-app{display:inline-block;margin-top:10px;font-size:14px}
   .cruce-pasar{margin-top:8px;border:0;border-radius:10px;padding:7px 12px;font-weight:800;font-size:13px;color:#fff;background:#14935A;cursor:pointer;box-shadow:0 2px 0 #0d6b41}
+  .cruce-t .ind{font-size:12px;color:var(--muted);margin-top:2px}
   .pasar-listas{display:grid;gap:8px}
   .pl-opt{display:block;width:100%;text-align:left;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card);cursor:pointer;color:var(--ink)}
   .pl-opt b{display:block;font-size:15px}
@@ -2277,7 +2278,7 @@
   const cacheCruce = new Map();
   const OTRA_TABLAS = { listas: 'listas', items: 'items' };
   // Pasar un producto a una lista de la otra app (misma cuenta, misma base): se agrega allá y sale de esta lista
-  async function pasarALaOtra(l, it, otro, alPasar){
+  async function pasarALaOtra(l, it, otro, alPasar, quitar){
     if (!sb || !user) { toast('Ingresá con Google para pasar productos a ' + OTRA_APP.nombre); return; }
     const rl = await sb.from(OTRA_TABLAS.listas).select('id,nombre').order('creada');
     if (rl.error) { toast('No se pudieron traer tus listas de ' + OTRA_APP.nombre + '. Probá de nuevo.'); return; }
@@ -2296,7 +2297,7 @@
         const r = await sb.from(OTRA_TABLAS.items).upsert({ user_id: user.id, lista_id: lid, ean: it.ean, nombre: String(it.name || p.nombre || '').slice(0, 160), cantidad: cant,
           rubro: it.rubro || '', imagen: it.img || p.imagen || '', link: p.link || '', datos }, { onConflict: 'lista_id,ean' });
         if (r.error) throw r.error;
-        l.items = l.items.filter(i => i !== it);
+        l.items = l.items.filter(i => i !== (quitar || it));
         saveLists(); renderLists(); if (view === 'listas' && typeof renderBuilderItems === 'function') renderBuilderItems();
         toast('Listo: pasaste ' + (it.name || 'el producto') + ' a «' + nombre + '» de ' + OTRA_APP.nombre + (of ? ' (en oferta en ' + p.tienda + ')' : ''));
         alPasar();
@@ -2308,7 +2309,7 @@
     rl.data.forEach(x => boton(x.nombre, 'Lista de ' + OTRA_APP.nombre, () => pasar(x.id)));
     const nueva = rl.data.some(x => x.nombre === l.name) ? l.name + ' (de ' + (OTRA_APP.nombre === 'Super Cart' ? 'Perfu' : 'Super') + ')' : l.name;
     boton('+ Nueva lista «' + nueva + '»', 'Se crea en ' + OTRA_APP.nombre, () => pasar(null, nueva));
-    abrirModal({ titulo: 'Pasar a ' + OTRA_APP.nombre, sub: (it.name || 'Este producto') + ' sale ' + fmt(otro.u * it.qty) + ' en ' + otro.p.tienda + '. Elegí a qué lista va; sale de «' + l.name + '».', cuerpo, acciones: [] });
+    abrirModal({ titulo: 'Pasar a ' + OTRA_APP.nombre, sub: (it.name || 'Este producto') + ' sale ' + fmt(otro.u * it.qty) + ' en ' + otro.p.tienda + '. Elegí a qué lista va; ' + (quitar ? (quitar.name || 'el pack') + ' sale' : 'sale') + ' de «' + l.name + '».', cuerpo, acciones: [] });
   }
   function pintarCruce(l, box, combo, alPasar){
     const cont = document.createElement('div'); cont.className = 'cruce';
@@ -2368,6 +2369,135 @@
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => { const precios = (d && d.precios) || {}; cacheCruce.set(clave, { t: Date.now(), precios, buscados: new Set(items.map(i => i.ean)) }); if (cont.isConnected) pintar(precios); })
       .catch(() => cont.remove());
+  }
+
+  // ---------- Packs: ¿conviene comprar las unidades sueltas? ----------
+  const NORMP = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const UNIDP = { g: 'g', gr: 'g', grs: 'g', gramos: 'g', ml: 'ml', cc: 'ml', kg: 'kg', l: 'l', lt: 'l', lts: 'l' };
+  const RE_TAM = /(\d+(?:\.\d+)?)\s*(gramos|grs|gr|g|ml|cc|kg|lts|lt|l)\b/g;
+  function packDe(nombre){
+    const s = NORMP(nombre).replace(/,/g, '.');
+    let m = /\b(\d{1,2})\s*[x×]\s*(\d+(?:\.\d+)?)\s*(gramos|grs|gr|g|ml|cc|kg|lts|lt|l)\b/.exec(s);
+    if (m && +m[1] >= 2 && +m[1] <= 12) return { n: +m[1], tams: [+m[2]], u: UNIDP[m[3]] };
+    const tm = new RegExp(RE_TAM.source).exec(s);
+    const nm = /\bx\s*(\d{1,2})\s*(?:u|un|ud|uds|unid|unidades)?\b(?!\s*(?:gramos|grs|gr|g|ml|cc|kg|lts|lt|l)\b)|\b(\d{1,2})\s*(?:u|un|ud|uds|unid|unidades)\b/.exec(s);
+    if (tm && nm) {
+      const n = +(nm[1] || nm[2]), tam = +tm[1];
+      if (n >= 2 && n <= 12) return { n, tams: Number.isInteger(tam / n) && tam / n >= 10 ? [tam, tam / n] : [tam], u: UNIDP[tm[2]] };
+    }
+    return null;
+  }
+  const GENERICOSP = new Set('de del la el los las en y con para por x u un ud uds unid unidad unidades individual barra tocador pack multipack promo bli blister gr grs g gramos ml cc kg l lt lts bolsa caja paquete'.split(' '));
+  const tokensP = s => NORMP(s).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !/^\d/.test(w) && !GENERICOSP.has(w) && !/^x\d+$/.test(w));
+  // ¿Es este producto la versión individual del pack? Mismas palabras clave (marca, tipo, variedad) y el mismo tamaño, sin palabras de más
+  function esIndividual(pk, T, nombre){
+    if (packDe(nombre)) return false;
+    const s = NORMP(nombre).replace(/,/g, '.');
+    const tams = [...s.matchAll(RE_TAM)].filter(m => UNIDP[m[2]] === pk.u).map(m => +m[1]);
+    if (!tams.some(x => pk.tams.includes(x))) return false;
+    const C = tokensP(nombre);
+    if (C.some(w => !T.includes(w))) return false;
+    const hits = T.filter(w => C.includes(w)).length;
+    return hits >= Math.min(2, T.length) && hits >= T.length - 1;
+  }
+  const cachePacks = new Map();
+  const pedirCruce = (url, cuerpo) => fetch(url + '/api/cruce', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ sucursal: (typeof cfg !== 'undefined' && cfg.suc) || '200' }, cuerpo)) })
+    .then(r => r.ok ? r.json() : null).catch(() => null);
+  async function datosPack(it, pk, conOtra){
+    const T = tokensP(it.name);
+    const q = T.join(' ') + ' ' + pk.tams[pk.tams.length - 1] + ' ' + pk.u;
+    const apps = [{ url: '', app: 'esta' }].concat(conOtra ? [{ url: OTRA_APP.url, app: 'otra' }] : []);
+    const bus = await Promise.all(apps.map(a => pedirCruce(a.url, { buscar: [{ q }] })));
+    const cuenta = new Map();
+    bus.forEach(d => ((d && d.candidatos && d.candidatos[q]) || []).forEach(c => {
+      if (c.ean === it.ean || !esIndividual(pk, T, c.nombre)) return;
+      const x = cuenta.get(c.ean) || { ean: c.ean, nombre: c.nombre, n: 0 }; x.n++; cuenta.set(c.ean, x);
+    }));
+    const ind = [...cuenta.values()].sort((a, b) => b.n - a.n)[0];
+    if (!ind) return null;
+    const pre = await Promise.all(apps.map(a => pedirCruce(a.url, { items: [{ ean: ind.ean, nombre: ind.nombre }] })));
+    const ops = [];
+    pre.forEach((d, i) => ((d && d.precios && d.precios[ind.ean]) || []).forEach(p => ops.push({ app: apps[i].app, p: { ...p, promo: [p.promo, p.promo_condicion].filter(Boolean).join(' · ') } })));
+    return { ind, ops };
+  }
+  function pintarPacks(l, box, combo, ctx){
+    const packs = l.items.map(it => ({ it, pk: it.ean && packDe(it.name) })).filter(x => x.pk).slice(0, 5);
+    if (!packs.length) return;
+    const mio = new Map(); combo.forEach((g, k) => g.lines.forEach(x => mio.set(x.it.id, { k, u: x.u, p: x.p })));
+    const cont = document.createElement('div'); cont.className = 'cruce packs';
+    cont.innerHTML = '<div class="cruce-h"><small><span class="spinner"></span>Revisando si conviene comprar tus packs por unidad…</small></div>';
+    box.appendChild(cont);
+    Promise.all(packs.map(async x => {
+      const c = cachePacks.get(x.it.ean);
+      if (c && Date.now() - c.t < 10 * 60 * 1000) return { ...x, d: c.d };
+      const d = await datosPack(x.it, x.pk, paraCruce(x.it)).catch(() => null);
+      cachePacks.set(x.it.ean, { t: Date.now(), d });
+      return { ...x, d };
+    })).then(rs => {
+      if (!cont.isConnected) return;
+      cont.innerHTML = '';
+      const filas = [];
+      rs.forEach(({ it, pk, d }) => {
+        const acá = mio.get(it.id);
+        if (!d || !acá || !d.ops.length) return;
+        const N = pk.n * it.qty;
+        const mejor = d.ops.map(o => ({ ...o, u: unitFor(o.p, N) })).filter(o => o.u > 0).sort((a, b) => a.u - b.u)[0];
+        if (!mejor) return;
+        const packTotal = acá.u * it.qty, suelto = mejor.u * N, dif = packTotal - suelto;
+        if (dif >= 50 && suelto < packTotal * 0.98) filas.push({ it, pk, d, acá, mejor, N, packTotal, suelto, dif });
+      });
+      const h = document.createElement('div'); h.className = 'cruce-h'; h.innerHTML = '<b></b><small></small>';
+      h.children[0].textContent = '📦 ¿Conviene comprar sueltos?';
+      if (!filas.length) {
+        h.children[1].textContent = 'Revisamos ' + (packs.length === 1 ? 'tu pack' : 'tus ' + packs.length + ' packs') + ' contra las unidades sueltas: conviene el pack, o no encontramos la versión individual.';
+        cont.classList.add('nada'); cont.appendChild(h); return;
+      }
+      h.children[1].textContent = (filas.length === 1 ? 'Un pack de tu lista sale más caro' : filas.length + ' packs de tu lista salen más caros') + ' que comprar las unidades sueltas.';
+      cont.appendChild(h);
+      filas.sort((a, b) => b.dif - a.dif).forEach(f => {
+        const r = document.createElement('div'); r.className = 'cruce-r';
+        r.appendChild(fotoMini(f.it.img || f.mejor.p.imagen, 'pthumb'));
+        const tx = document.createElement('div'); tx.className = 'cruce-t';
+        tx.innerHTML = '<div class="n"></div><div class="v"><span class="aca"></span><span class="otra"></span></div><div class="ind"></div><div class="a"></div>';
+        tx.querySelector('.n').textContent = (f.it.qty > 1 ? fmtQ(f.it.qty) + ' × ' : '') + f.it.name;
+        tx.querySelector('.aca').textContent = 'Pack: ' + SUPERS[f.acá.k] + ' ' + fmt(f.packTotal);
+        const lugar = f.mejor.app === 'otra' ? ' (' + OTRA_APP.nombre + ')' : '';
+        tx.querySelector('.otra').textContent = f.N + ' sueltos en ' + f.mejor.p.tienda + lugar + ' ' + fmt(f.suelto) + (f.mejor.p.precio_promo && f.mejor.u < f.mejor.p.precio - 0.5 ? ' (' + (f.mejor.p.promo.split(' · ')[0] || 'oferta') + ')' : '');
+        tx.querySelector('.ind').textContent = f.d.ind.nombre + ' · ' + fmt(f.mejor.u) + ' c/u';
+        const a = tx.querySelector('.a');
+        const b = document.createElement('b'); b.textContent = 'Ahorrás ' + fmt(f.dif); a.appendChild(b);
+        if (f.mejor.p.link) { const ln = document.createElement('a'); ln.href = f.mejor.p.link; ln.target = '_blank'; ln.rel = 'noopener'; ln.textContent = 'Ver en ' + f.mejor.p.tienda + ' ›'; a.appendChild(ln); }
+        const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'cruce-pasar';
+        const sint = { ean: f.d.ind.ean, name: f.mejor.p.nombre || f.d.ind.nombre, qty: f.N, img: f.mejor.p.imagen || '', rubro: f.it.rubro || '' };
+        if (f.mejor.app === 'otra') {
+          pb.textContent = 'Pasar ' + f.N + ' sueltos a ' + OTRA_APP.nombre;
+          pb.addEventListener('click', () => pasarALaOtra(l, sint, { p: f.mejor.p, u: f.mejor.u }, ctx.rerender, f.it));
+        } else {
+          pb.textContent = 'Cambiar por ' + f.N + ' sueltos';
+          pb.addEventListener('click', () => cambiarPorSueltos(ctx, f.it, sint, f.mejor));
+        }
+        tx.appendChild(pb);
+        r.appendChild(tx); cont.appendChild(r);
+      });
+    });
+  }
+  // En esta misma app: el pack sale de la lista y entran las unidades sueltas (si ya estaban, se suman)
+  async function cambiarPorSueltos(ctx, pack, sint, mejor){
+    const l = ctx.l, p = mejor.p, k = p.k;
+    let nuevo = l.items.find(i => i.ean === sint.ean);
+    if (nuevo) nuevo.qty = Math.min(999, (+nuevo.qty || 1) + sint.qty);
+    else {
+      const of = !!(p.precio_promo && mejor.u < p.precio - 0.5);
+      nuevo = { id: uid(), name: sint.name, ean: sint.ean, qty: sint.qty, price: p.precio, listPrice: p.precio_lista || null, promoPrice: p.precio_promo || null, lleva: lleva(p), promo: p.promo || '',
+        sup: SUPERS[k] || p.tienda, rubro: sint.rubro, status: 'ok', statusSup: SUPERS[k] || p.tienda, img: sint.img, link: p.link || '' };
+      l.items.splice(Math.max(0, l.items.indexOf(pack)), 0, nuevo);
+      ctx.res[nuevo.id] = {};
+      await Promise.all(Object.keys(SUPERS).map(async k2 => { ctx.res[nuevo.id][k2] = await findIn(k2, nuevo); }));
+    }
+    l.items = l.items.filter(i => i !== pack);
+    saveLists(); renderLists(); if (view === 'listas' && typeof renderBuilderItems === 'function') renderBuilderItems();
+    toast('Cambiaste ' + (pack.name || 'el pack') + ' por ' + sint.qty + ' sueltos: ahorrás comprándolos así');
+    ctx.rerender();
   }
 
   function renderPlan(l, box, res){
@@ -2627,7 +2757,11 @@
 
 
 
-    if (box.id === 'bPlan') pintarCruce(l, box, combo, () => { const y = window.scrollY; renderPlan(l, box, res); window.scrollTo(0, y); });
+    if (box.id === 'bPlan') {
+      const rerender = () => { const y = window.scrollY; renderPlan(l, box, res); window.scrollTo(0, y); };
+      pintarCruce(l, box, combo, rerender);
+      pintarPacks(l, box, combo, { l, res, rerender });
+    }
     if (missing.length) {
       const m = document.createElement('div'); m.className = 'hint';
       m.textContent = 'No encontré en ninguna tienda: ' + missing.map(x => x.name).join(', ') + '.';
