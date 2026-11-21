@@ -491,6 +491,10 @@
   .pl-opt b{display:block;font-size:15px}
   .pl-opt small{color:var(--muted);font-size:12px}
   .pl-opt:hover{border-color:#14935A}
+  .grp-sep{margin:16px 0 4px;padding-top:12px;border-top:2px dashed var(--line);font-weight:800;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .opt .grp .ln.tachado{opacity:.75}
+  .opt .grp .ln.tachado .lnn,.opt .grp .ln.tachado .lnp{text-decoration:line-through;color:var(--muted)}
+  .opt .ln .lnq{grid-area:s;font-size:13px;color:var(--muted);font-weight:600}
   .ln-cmp{grid-area:c;font-size:12px;color:var(--muted);line-height:1.35;margin-top:1px}
   .ln-cmp span{white-space:nowrap}
   .ln-cmp span.caro{font-weight:700;color:var(--ink)}
@@ -1293,12 +1297,16 @@
   } catch(e) {}
 
   // ---------- pasar el carrito a la tienda para pagar ----------
-  const superKey = () => Object.fromEntries(Object.entries(SUPERS).map(([k, v]) => [v, k]));
+  // Tiendas de la otra app (Super Cart / Perfu Cart): también pueden quedar en el carrito más conveniente
+  const OTRAS_TIENDAS = { coto: 'Coto', carrefour: 'Carrefour', dia: 'Día', changomas: 'ChangoMás', jumbo: 'Jumbo', vea: 'Vea', disco: 'Disco' };
+  const nomT = k => SUPERS[k] || OTRAS_TIENDAS[k] || k;
+  const superKey = () => Object.fromEntries(Object.entries({ ...OTRAS_TIENDAS, ...SUPERS }).map(([k, v]) => [v, k]));
   // Estas tiendas no aceptan un carrito armado desde otra página: se muestran los productos con su enlace
-  const SIN_CARRO = { gpsfarma: 1 };
+  const SIN_CARRO = { gpsfarma: 1, coto: 1, carrefour: 1, jumbo: 1, vea: 1, disco: 1 };
   // Cargan el carrito pero después muestran su portada: hay que tocar Carrito
   const VA_A_PORTADA = { farmacity: 1, simplicity: 1 };
-  const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', gpsfarma: 'https://gpsfarma.com' };
+  const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', gpsfarma: 'https://gpsfarma.com',
+    coto: 'https://www.coto.com.ar', carrefour: 'https://www.carrefour.com.ar', dia: 'https://diaonline.supermercadosdia.com.ar', changomas: 'https://www.masonline.com.ar', jumbo: 'https://www.jumbo.com.ar', vea: 'https://www.vea.com.ar', disco: 'https://www.disco.com.ar' };
   function renderBuy(groups){
     const bx = $('buyBox'); bx.innerHTML = '';
     const SUPER_KEY = superKey();
@@ -1316,6 +1324,7 @@
   }
   async function completarDatos(k, it){
     if (SIN_CARRO[k] ? it.link : it.sku) return;
+    if (!SUPERS[k]) return;   // tienda de la otra app: los datos ya vienen del cruce
     if (!it.ean) return;
     try {
       const r = await fetch('/api/vtex?tienda=' + k + '&ean=' + encodeURIComponent(it.ean) + '&limite=5');
@@ -2311,7 +2320,7 @@
     boton('+ Nueva lista «' + nueva + '»', 'Se crea en ' + OTRA_APP.nombre, () => pasar(null, nueva));
     abrirModal({ titulo: 'Pasar a ' + OTRA_APP.nombre, sub: (it.name || 'Este producto') + ' sale ' + fmt(otro.u * it.qty) + ' en ' + otro.p.tienda + '. Elegí a qué lista va; ' + (quitar ? (quitar.name || 'el pack') + ' sale' : 'sale') + ' de «' + l.name + '».', cuerpo, acciones: [] });
   }
-  function pintarCruce(l, box, combo, alPasar){
+  function pintarCruce(l, box, combo, alPasar, fuera){
     const cont = document.createElement('div'); cont.className = 'cruce';
     box.appendChild(cont);
     const items = l.items.filter(it => it.ean && /^\d{8,14}$/.test(it.ean) && paraCruce(it));
@@ -2319,55 +2328,26 @@
     const mio = new Map();
     combo.forEach((g, k) => g.lines.forEach(x => mio.set(x.it.id, { k, u: x.u })));
     const clave = 'todo';
-    const pintar = precios => {
+    const pintar = () => {
       cont.innerHTML = '';
-      const filas = [];
-      items.forEach(it => {
-        const ops = (precios[it.ean] || []).map(p => { const pp = { ...p, promo: [p.promo, p.promo_condicion].filter(Boolean).join(' · ') }; return { p: pp, u: unitFor(pp, it.qty) }; })
-          .filter(o => o.u > 0).sort((a, b) => a.u - b.u);
-        if (!ops.length) return;
-        const otro = ops[0], acá = mio.get(it.id);
-        const dif = acá ? (acá.u - otro.u) * it.qty : null;
-        if (acá && !(dif >= 50 && otro.u < acá.u * 0.98)) return;
-        filas.push({ it, otro, acá, dif });
-      });
-      const h = document.createElement('div'); h.className = 'cruce-h';
-      h.innerHTML = '<b></b><small></small>';
+      const fs = [...fuera.values()].filter(f => f.tipo === 'cruce');
+      const h = document.createElement('div'); h.className = 'cruce-h'; h.innerHTML = '<b></b><small></small>';
       h.children[0].textContent = '💡 ' + OTRA_APP.titulo;
-      if (!filas.length) {
+      if (!fs.length) {
         h.children[1].textContent = 'Revisamos ' + (items.length === 1 ? 'tu producto' : 'tus ' + items.length + ' productos') + ' en ' + OTRA_APP.lugar + ' (' + OTRA_APP.nombre + '): ninguno sale más barato que acá.';
         cont.classList.add('nada'); cont.appendChild(h); return;
       }
-      filas.sort((a, b) => (b.dif == null) - (a.dif == null) || (b.dif || 0) - (a.dif || 0));
-      const total = filas.reduce((s, f) => s + (f.dif || 0), 0);
-      h.children[1].textContent = (filas.length === 1 ? 'Un producto de tu lista sale' : filas.length + ' productos de tu lista salen') + ' menos en ' + OTRA_APP.lugar + ' (precios de ' + OTRA_APP.nombre + ')' + (total > 0 ? ': ahorrarías ' + fmt(total) + '.' : '.');
+      const ah = fs.reduce((s, f) => s + (f.aqui ? f.aqui.u * f.qty - f.total : 0), 0);
+      h.children[1].textContent = (fs.length === 1 ? 'Un producto de tu lista sale' : fs.length + ' productos de tu lista salen') + ' menos en ' + OTRA_APP.lugar + (ah > 0 ? ' (ahorrás ' + fmt(ah) + ')' : '') + ': ya están en tu carrito más conveniente, y tachados en la tienda de acá donde iban.';
       cont.appendChild(h);
-      filas.forEach(f => {
-        const r = document.createElement('div'); r.className = 'cruce-r';
-        r.appendChild(fotoMini(f.it.img || f.otro.p.imagen, 'pthumb'));
-        const tx = document.createElement('div'); tx.className = 'cruce-t';
-        tx.innerHTML = '<div class="n"></div><div class="v"><span class="aca"></span><span class="otra"></span></div><div class="a"></div>';
-        tx.querySelector('.n').textContent = (f.it.qty > 1 ? fmtQ(f.it.qty) + ' × ' : '') + f.it.name;
-        tx.querySelector('.aca').textContent = f.acá ? 'Acá: ' + SUPERS[f.acá.k] + ' ' + fmt(f.acá.u * f.it.qty) : 'Acá no lo encontré';
-        tx.querySelector('.otra').textContent = f.otro.p.tienda + ' ' + fmt(f.otro.u * f.it.qty) + (f.otro.p.precio_promo && f.otro.u < f.otro.p.precio - 0.5 ? ' (' + (f.otro.p.promo.split(' · ')[0] || 'oferta') + ')' : '');
-        const a = tx.querySelector('.a');
-        if (f.dif > 0) { const b = document.createElement('b'); b.textContent = 'Ahorrás ' + fmt(f.dif); a.appendChild(b); }
-        if (f.otro.p.link) { const ln = document.createElement('a'); ln.href = f.otro.p.link; ln.target = '_blank'; ln.rel = 'noopener'; ln.textContent = 'Ver en ' + f.otro.p.tienda + ' ›'; a.appendChild(ln); }
-        const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'cruce-pasar'; pb.textContent = 'Pasar a ' + OTRA_APP.nombre;
-        pb.addEventListener('click', () => pasarALaOtra(l, f.it, f.otro, alPasar));
-        tx.appendChild(pb);
-        r.appendChild(tx); cont.appendChild(r);
-      });
-      const ab = document.createElement('a'); ab.className = 'cruce-app'; ab.href = OTRA_APP.url + '/#listas'; ab.target = '_blank'; ab.rel = 'noopener';
-      ab.textContent = 'Abrir ' + OTRA_APP.nombre + ' ›'; cont.appendChild(ab);
     };
     const c = cacheCruce.get(clave);
-    if (c && Date.now() - c.t < 10 * 60 * 1000 && items.every(i => c.buscados.has(i.ean))) { pintar(c.precios); return; }
+    if (c && Date.now() - c.t < 10 * 60 * 1000 && items.every(i => c.buscados.has(i.ean))) { pintar(); return; }
     cont.innerHTML = '<div class="cruce-h"><small><span class="spinner"></span>Buscando tus productos en ' + OTRA_APP.lugar + '…</small></div>';
     fetch(OTRA_APP.url + '/api/cruce', { method: 'POST', headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ items: items.map(i => ({ ean: i.ean, nombre: i.name })), sucursal: (typeof cfg !== 'undefined' && cfg.suc) || '200' }) })
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(d => { const precios = (d && d.precios) || {}; cacheCruce.set(clave, { t: Date.now(), precios, buscados: new Set(items.map(i => i.ean)) }); if (cont.isConnected) pintar(precios); })
+      .then(d => { const precios = (d && d.precios) || {}; cacheCruce.set(clave, { t: Date.now(), precios, buscados: new Set(items.map(i => i.ean)) }); if (cont.isConnected) alPasar(); })
       .catch(() => cont.remove());
   }
 
@@ -2400,7 +2380,7 @@
     const hits = T.filter(w => C.includes(w)).length;
     return hits >= Math.min(2, T.length) && hits >= T.length - 1;
   }
-  const cachePacks = new Map();
+  const cachePacks = new Map(), packsEnCurso = new Map();
   const pedirCruce = (url, cuerpo) => fetch(url + '/api/cruce', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ sucursal: (typeof cfg !== 'undefined' && cfg.suc) || '200' }, cuerpo)) })
     .then(r => r.ok ? r.json() : null).catch(() => null);
   async function datosPack(it, pk, conOtra){
@@ -2427,14 +2407,18 @@
     const cont = document.createElement('div'); cont.className = 'cruce packs';
     cont.innerHTML = '<div class="cruce-h"><small><span class="spinner"></span>Revisando si conviene comprar tus packs por unidad…</small></div>';
     box.appendChild(cont);
+    let nuevos = false;
     Promise.all(packs.map(async x => {
       const c = cachePacks.get(x.it.ean);
       if (c && Date.now() - c.t < 10 * 60 * 1000) return { ...x, d: c.d };
-      const d = await datosPack(x.it, x.pk, paraCruce(x.it)).catch(() => null);
+      nuevos = true;
+      if (!packsEnCurso.has(x.it.ean)) packsEnCurso.set(x.it.ean, datosPack(x.it, x.pk, paraCruce(x.it)).catch(() => null).finally(() => packsEnCurso.delete(x.it.ean)));
+      const d = await packsEnCurso.get(x.it.ean);
       cachePacks.set(x.it.ean, { t: Date.now(), d });
       return { ...x, d };
     })).then(rs => {
       if (!cont.isConnected) return;
+      if (nuevos && rs.some(x => x.d && x.d.ops.some(o => o.app === 'otra'))) { ctx.rerender(); return; }   // recalcular el carrito con los sueltos de la otra app
       cont.innerHTML = '';
       const filas = [];
       rs.forEach(({ it, pk, d }) => {
@@ -2470,8 +2454,8 @@
         const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'cruce-pasar';
         const sint = { ean: f.d.ind.ean, name: f.mejor.p.nombre || f.d.ind.nombre, qty: f.N, img: f.mejor.p.imagen || '', rubro: f.it.rubro || '' };
         if (f.mejor.app === 'otra') {
-          pb.textContent = 'Pasar ' + f.N + ' sueltos a ' + OTRA_APP.nombre;
-          pb.addEventListener('click', () => pasarALaOtra(l, sint, { p: f.mejor.p, u: f.mejor.u }, ctx.rerender, f.it));
+          const ok = document.createElement('div'); ok.className = 'ind'; ok.textContent = '✓ Ya está en tu carrito más conveniente, en la tarjeta de ' + f.mejor.p.tienda + '.';
+          tx.appendChild(ok); r.appendChild(tx); cont.appendChild(r); return;
         } else {
           pb.textContent = 'Cambiar por ' + f.N + ' sueltos';
           pb.addEventListener('click', () => cambiarPorSueltos(ctx, f.it, sint, f.mejor));
@@ -2500,13 +2484,40 @@
     ctx.rerender();
   }
 
+  // Productos de la lista que conviene comprar en una tienda de la otra app (por el cruce o por comprar sueltos en vez del pack)
+  const conviene = (allá, acá) => allá < acá - 50 && allá < acá * 0.98;
+  function calcularFuera(l, res){
+    const out = new Map(), c = cacheCruce.get('todo'), vivo = x => x && Date.now() - x.t < 10 * 60 * 1000;
+    l.items.forEach(it => {
+      let aqui = null;
+      Object.keys(SUPERS).forEach(k => { const p = res[it.id] && res[it.id][k]; if (!p) return; const u = unitFor(p, it.qty); if (u > 0 && (!aqui || u < aqui.u)) aqui = { k, p, u }; });
+      let mejor = null;
+      const prueba = (k, p, qty, extra) => { const u = unitFor(p, qty); if (u > 0 && (!mejor || u * qty < mejor.total)) mejor = Object.assign({ k, p, u, qty, total: u * qty }, extra); };
+      if (vivo(c) && it.ean && c.precios[it.ean]) c.precios[it.ean].forEach(p0 => prueba(p0.k, { ...p0, promo: [p0.promo, p0.promo_condicion].filter(Boolean).join(' · ') }, it.qty, { tipo: 'cruce' }));
+      const cp = it.ean && cachePacks.get(it.ean), pd = cp && vivo(cp) && cp.d && packDe(it.name);
+      if (pd) cp.d.ops.filter(o => o.app === 'otra').forEach(o => prueba(o.p.k, { ...o.p, nombre: o.p.nombre || cp.d.ind.nombre, ean: cp.d.ind.ean }, pd.n * it.qty, { tipo: 'sueltos', ind: cp.d.ind }));
+      if (mejor && (!aqui || conviene(mejor.total, aqui.u * it.qty))) out.set(it.id, Object.assign(mejor, { aqui }));
+    });
+    return out;
+  }
+
   function renderPlan(l, box, res){
     const keys = Object.keys(SUPERS);
+    const fuera = calcularFuera(l, res);
     // Opción combinada: cada producto en el súper más barato
     const combo = new Map(); const missing = []; let comboTotal = 0;
     l.items.forEach(it => {
       let best = null;
       keys.forEach(k => { const p = res[it.id][k]; if (!p) return; const u = unitFor(p, it.qty); if (!(u > 0)) return; if (!best || u < best.u) best = { k, p, u }; });
+      const f = fuera.get(it.id);
+      if (f) {
+        // va a una tienda de la otra app; acá queda tachado en la tienda donde iba a ir
+        const g2 = combo.get(f.k) || { lines: [], total: 0, otra: true };
+        g2.lines.push({ it, p: f.p, u: f.u, qty: f.qty, tipo: f.tipo, ind: f.ind }); g2.total += f.total; combo.set(f.k, g2);
+        comboTotal += f.total;
+        if (best) { const g = combo.get(best.k) || { lines: [], total: 0 }; g.lines.push({ it, p: best.p, u: best.u, tachado: f }); combo.set(best.k, g); }
+        return;
+      }
       if (!best) { missing.push(it); return; }
       const g = combo.get(best.k) || { lines: [], total: 0 };
       g.lines.push({ it, p: best.p, u: best.u }); g.total += best.u * it.qty; combo.set(best.k, g);
@@ -2527,7 +2538,7 @@
     if (!found) { box.innerHTML = '<div class="hint">No encontré estos productos en ninguna tienda. Probá agregarlos con el código de barras.</div>'; return; }
 
     // Todas las opciones, de la más barata a la más cara: combinar tiendas y todo en una sola tienda
-    const aItems = lines => lines.map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }));
+    const aItems = lines => lines.filter(x => !x.tachado).map(x => ({ ean: x.p.ean || x.it.ean || '', name: x.p.nombre, qty: x.qty != null ? x.qty : x.it.qty, sku: x.p.sku || '', seller: x.p.seller || '', link: x.p.link || '' }));
     function tarjetaOpcion(op, idx){
       const multi = op.grupos.length > 1;
       const o = document.createElement('div'); o.className = 'opt' + (idx === 0 ? ' win' : '') + (op.faltan ? ' incompleta' : '') + (multi ? ' multi' : '');
@@ -2536,23 +2547,33 @@
       o.querySelector('.os').innerHTML = op.sub;
       if (idx === 0) { const b = document.createElement('span'); b.className = 'bestTag'; b.textContent = 'Más barato'; o.querySelector('.os').prepend(b); }
       if (multi) { const rs = document.createElement('div'); rs.className = 'resumen'; rs.append(o.querySelector('h4'), o.querySelector('.os')); o.prepend(rs); }
+      let sepPuesto = false;
       op.grupos.forEach(([k, g]) => {
+        if (!(k in SUPERS) && !sepPuesto) {
+          sepPuesto = true;
+          const sp = document.createElement('div'); sp.className = 'grp-sep';
+          sp.textContent = (SUPERS.coto ? '💄 En farmacias y perfumerías (precios de Perfu Cart)' : '🛒 En el súper (precios de Super Cart)');
+          o.appendChild(sp);
+        }
+        const vivas = g.lines.filter(x => !x.tachado);
         const d = document.createElement('div'); d.className = 'grp'; d.style.setProperty('--tc', COLOR_TIENDA[k] || 'var(--accent)');
         const hd = document.createElement('div'); hd.className = 'grp-h';
         hd.innerHTML = '<span><b></b><small></small></span>';
         if (multi) {
-          const av = document.createElement('i'); av.className = 'av'; av.textContent = SUPERS[k].charAt(0); hd.prepend(av);
-          hd.querySelector('b').textContent = SUPERS[k];
+          const av = document.createElement('i'); av.className = 'av'; av.textContent = nomT(k).charAt(0); hd.prepend(av);
+          hd.querySelector('b').textContent = nomT(k);
           const sm = hd.querySelector('small'); sm.innerHTML = '<span></span> <span></span>';
-          sm.children[0].textContent = g.lines.length + (g.lines.length === 1 ? ' producto ·' : ' productos ·'); sm.children[1].textContent = fmt(g.total);
+          if (vivas.length) { sm.children[0].textContent = vivas.length + (vivas.length === 1 ? ' producto ·' : ' productos ·'); sm.children[1].textContent = fmt(g.total); }
+          else { sm.children[0].textContent = 'Nada para comprar acá'; sm.children[1].textContent = ''; }
         }
         else { hd.querySelector('span').replaceChildren(...o.querySelector('.os').childNodes); o.querySelector('.os').remove(); d.classList.add('solo'); }
         const pb = document.createElement('button'); pb.type = 'button';
         pb.className = 'btn pasar' + ((box.querySelectorAll('.pasar').length + o.querySelectorAll('.pasar').length) % 2 ? ' rosa' : '');
         pb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 4h2.2l2.3 10.2a1.6 1.6 0 0 0 1.6 1.3h7.7a1.6 1.6 0 0 0 1.6-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.4" fill="currentColor"/><circle cx="16.5" cy="19.5" r="1.4" fill="currentColor"/></svg><span></span>';
-        pb.querySelector('span').textContent = SUPERS[k] + ' (' + g.lines.length + ') ›';
-        pb.setAttribute('aria-label', 'Ir al carrito de ' + SUPERS[k] + ', ' + g.lines.length + (g.lines.length === 1 ? ' producto' : ' productos'));
-        pb.addEventListener('click', () => exportarCarrito(SUPERS[k], pb, aItems(g.lines)));
+        pb.querySelector('span').textContent = nomT(k) + ' (' + vivas.length + ') ›';
+        pb.setAttribute('aria-label', 'Ir al carrito de ' + nomT(k) + ', ' + vivas.length + (vivas.length === 1 ? ' producto' : ' productos'));
+        pb.addEventListener('click', () => exportarCarrito(nomT(k), pb, aItems(g.lines)));
+        if (!vivas.length) pb.hidden = true;
         if (op.faltantes && op.faltantes.length) {
           const acts = document.createElement('div'); acts.className = 'grp-acts';
           const fb = document.createElement('button'); fb.type = 'button'; fb.className = 'falt-btn';
@@ -2563,14 +2584,38 @@
         d.appendChild(hd);
         // Primero los productos en oferta en esta tienda, debajo los que no
         const enOf = x => !!x.p.precio_promo;
-        const conOf = g.lines.filter(enOf), sinOf = g.lines.filter(x => !enOf(x));
+        const conOf = vivas.filter(enOf), sinOf = vivas.filter(x => !enOf(x)), tach = g.lines.filter(x => x.tachado);
         const titulo = (txt, cls) => { const s = document.createElement('div'); s.className = 'ln-sec ' + cls; s.textContent = txt; d.appendChild(s); };
-        [...conOf, ...sinOf].forEach((x, ix) => {
+        [...conOf, ...sinOf, ...tach].forEach((x, ix) => {
           if (conOf.length && sinOf.length && ix === 0) titulo('🔥 En oferta (' + conOf.length + ')', 'on');
           if (conOf.length && sinOf.length && ix === conOf.length) titulo('Sin oferta (' + sinOf.length + ')', 'off');
+          if (x.tachado) {
+            if (ix === conOf.length + sinOf.length) titulo('Conviene en otra tienda (' + tach.length + ')', 'off');
+            const lt = document.createElement('div'); lt.className = 'ln tachado';
+            lt.innerHTML = '<span class="lnn"></span><span class="lnq"></span><span class="lnp"></span><div class="ln-cmp"><div></div></div>';
+            lt.querySelector('.lnn').textContent = x.p.nombre || x.it.name;
+            lt.querySelector('.lnq').textContent = fmtQ(x.it.qty) + (x.it.qty === 1 ? ' unidad' : ' unidades');
+            lt.querySelector('.lnp').textContent = fmt(x.u * x.it.qty);
+            const f = x.tachado, nota = lt.querySelector('.ln-cmp div');
+            const s = document.createElement('span'); s.className = 'mejor';
+            s.textContent = (f.tipo === 'sueltos' ? f.qty + ' sueltos en ' : 'Más barato en ') + nomT(f.k) + ' ' + fmt(f.total);
+            nota.append(s, ' · ahorrás ' + fmt(x.u * x.it.qty - f.total));
+            lt.prepend(fotoMini(x.p.imagen || x.it.img, 'pthumb'));
+            d.appendChild(lt); return;
+          }
+          if (x.tipo === 'sueltos') {
+            const ls = document.createElement('div'); ls.className = 'ln';
+            ls.innerHTML = '<span class="lnn"></span><span class="lnq"></span><span class="lnp mejor"></span><div class="ln-cmp"><div></div></div>';
+            ls.querySelector('.lnn').textContent = x.p.nombre;
+            ls.querySelector('.lnq').textContent = x.qty + ' unidades';
+            ls.querySelector('.lnp').textContent = fmt(x.u * x.qty);
+            ls.querySelector('.ln-cmp div').textContent = 'En vez de ' + (x.it.qty > 1 ? fmtQ(x.it.qty) + ' × ' : '') + x.it.name + (x.p.precio_promo && x.u < x.p.precio - 0.5 ? ' · ' + (x.p.promo || '').split(' · ')[0] : '');
+            ls.prepend(fotoMini(x.p.imagen || x.it.img, 'pthumb'));
+            d.appendChild(ls); return;
+          }
           const ln = document.createElement('div'); ln.className = 'ln';
           ln.innerHTML = `<span class="lnn"></span><div class="mini-step"><button type="button" data-d="-1" aria-label="Menos">−</button><b>${fmtQ(x.it.qty)}</b><button type="button" data-d="1" aria-label="Más">+</button></div><span class="lnp"></span>`;
-          ln.querySelector('.lnn').textContent = x.p.nombre;
+          ln.querySelector('.lnn').textContent = (!(k in SUPERS) && x.it.name) || x.p.nombre;
           ln.querySelector('.lnp').textContent = fmt(x.u * x.it.qty);
           ln.querySelectorAll('.mini-step button').forEach(bt => bt.addEventListener('click', () => {
             const nq = Math.max(1, Math.round((x.it.qty + Number(bt.dataset.d)) * 1000) / 1000);
@@ -2612,7 +2657,7 @@
               const otraMasBarata = otros[0].v < mio - 1;
               if (!otraMasBarata) ln.querySelector('.lnp').classList.add('mejor');
               c.innerHTML = '<div></div>';
-              otros.forEach((o, i) => { if (i) c.children[0].append(' · '); const s = document.createElement('span'); s.className = otraMasBarata && o.v <= otros[0].v + 0.5 ? 'mejor' : 'caro'; s.textContent = SUPERS[o.k] + '\u00a0' + fmt(o.v).replace(' ', '\u00a0'); c.children[0].appendChild(s); });
+              otros.forEach((o, i) => { if (i) c.children[0].append(' · '); const s = document.createElement('span'); s.className = otraMasBarata && o.v <= otros[0].v + 0.5 ? 'mejor' : 'caro'; s.textContent = nomT(o.k) + '\u00a0' + fmt(o.v).replace(' ', '\u00a0'); c.children[0].appendChild(s); });
               ln.appendChild(c);
             }
           }
@@ -2625,8 +2670,8 @@
     const nombres = arr => arr.map(it => it.name).join(', ');
     const PL = SUPERS.coto ? 'súper' : 'tiendas';
     // 1) El carrito más conveniente
-    const mejor = { titulo: 'Tu carrito más conveniente', total: comboTotal, grupos: [...combo.entries()].sort((a, b) => b[1].total - a[1].total),
-      sub: combo.size > 1 ? 'Combinando ' + combo.size + ' ' + PL + ': cada producto donde está más barato.' : 'Todo en ' + SUPERS[[...combo.keys()][0]] + ' es lo más barato.' };
+    const mejor = { titulo: 'Tu carrito más conveniente', total: comboTotal, grupos: [...combo.entries()].sort((a, b) => (!!a[1].otra - !!b[1].otra) || b[1].total - a[1].total),
+      sub: combo.size > 1 ? 'Combinando ' + combo.size + ' ' + ([...combo.values()].some(g => g.otra) ? 'tiendas, del súper y de farmacias' : PL) + ': cada producto donde está más barato.' : 'Todo en ' + SUPERS[[...combo.keys()][0]] + ' es lo más barato.' };
     box.appendChild(tarjetaOpcion(mejor, 0));
     // ¿Vale la pena ir a varios súper? Ahorro frente a comprar todo en uno (el más barato con todo, o el que elijas)
     if (combo.size > 1) {
@@ -2637,10 +2682,10 @@
         const fs = [];
         combo.forEach((g, k) => {
           if (base && k === base.k) return;
-          g.lines.forEach(x => {
+          g.lines.filter(x => !x.tachado).forEach(x => {
             const eb = base && base.lines.find(y => y.it.id === x.it.id);
             const conOferta = !!(x.p.precio_promo && x.u < x.p.precio - 0.5);
-            const ahorro = eb ? (eb.u - x.u) * x.it.qty : 0;
+            const ahorro = eb ? eb.u * x.it.qty - x.u * (x.qty != null ? x.qty : x.it.qty) : 0;
             if (!base ? conOferta : (ahorro > 0.5 || !eb)) fs.push({ k, x, enBase: eb, ahorro, conOferta });
           });
         });
@@ -2652,7 +2697,7 @@
         const ln = document.createElement('div'); ln.className = 'ahorro-ln';
         if (baseInicial && baseInicial.found === found) {
           ln.innerHTML = '<span></span>';
-          ln.children[0].textContent = 'Ahorrás ' + fmt(baseInicial.total - comboTotal) + ' frente a comprar todo en ' + SUPERS[baseInicial.k] + ' (' + fmt(baseInicial.total) + ').';
+          ln.children[0].textContent = 'Ahorrás ' + fmt(baseInicial.total - comboTotal) + ' frente a comprar todo en ' + nomT(baseInicial.k) + ' (' + fmt(baseInicial.total) + ').';
         }
         const vb = document.createElement('button'); vb.type = 'button'; vb.className = 'ahorro-btn';
         vb.textContent = baseInicial ? 'Ver de dónde sale el ahorro' : 'Ver las ofertas de tu carrito';
@@ -2669,7 +2714,7 @@
           const ch = document.createElement('div'); ch.className = 'ah-chips';
           singles.slice().sort((a, b) => (b.found === found) - (a.found === found) || a.total - b.total).forEach(s => {
             const b = document.createElement('button'); b.type = 'button'; b.className = 'ah-chip' + (base && base.k === s.k ? ' on' : '');
-            b.style.setProperty('--tc', COLOR_TIENDA[s.k] || 'var(--accent)'); b.textContent = SUPERS[s.k];
+            b.style.setProperty('--tc', COLOR_TIENDA[s.k] || 'var(--accent)'); b.textContent = nomT(s.k);
             b.addEventListener('click', () => pintar(s)); ch.appendChild(b);
           });
           cont.appendChild(ch);
@@ -2680,18 +2725,18 @@
             const dif = base.total - comboTotal;
             res1.innerHTML = '<b></b><span></span>';
             res1.children[0].textContent = 'Ahorrás ' + fmt(dif);
-            res1.children[1].textContent = ' combinando ' + combo.size + ' ' + PLs + ', frente a comprar todo en ' + SUPERS[base.k] + ' (' + fmt(base.total) + ').';
-          } else res1.textContent = SUPERS[base.k] + ' no tiene ' + (found - base.found) + ' de tus productos: igual tendrías que ir a otro ' + (SUPERS.coto ? 'súper' : 'lugar') + ' para esos.';
+            res1.children[1].textContent = ' combinando ' + combo.size + ' ' + PLs + ', frente a comprar todo en ' + nomT(base.k) + ' (' + fmt(base.total) + ').';
+          } else res1.textContent = nomT(base.k) + ' no tiene ' + (found - base.found) + ' de tus productos: igual tendrías que ir a otro ' + (SUPERS.coto ? 'súper' : 'lugar') + ' para esos.';
           cont.appendChild(res1);
-          if (!fs.length) { const n = document.createElement('div'); n.className = 'hint'; n.textContent = 'Comprando todo en ' + SUPERS[base.k] + ' pagás lo mismo.'; cont.appendChild(n); return; }
+          if (!fs.length) { const n = document.createElement('div'); n.className = 'hint'; n.textContent = 'Comprando todo en ' + nomT(base.k) + ' pagás lo mismo.'; cont.appendChild(n); return; }
           // agrupado por súper
           const porK = new Map(); fs.forEach(f => { if (!porK.has(f.k)) porK.set(f.k, []); porK.get(f.k).push(f); });
           [...porK.entries()].sort((a, b) => b[1].reduce((s, f) => s + f.ahorro, 0) - a[1].reduce((s, f) => s + f.ahorro, 0)).forEach(([k, arr]) => {
             const sec = document.createElement('div'); sec.className = 'ah-sec'; sec.style.setProperty('--tc', COLOR_TIENDA[k] || 'var(--accent)');
             const sub = arr.reduce((s, f) => s + f.ahorro, 0);
             sec.innerHTML = '<div class="ah-sh"><i class="av"></i><b></b><em></em></div>';
-            sec.querySelector('.av').textContent = SUPERS[k].charAt(0);
-            sec.querySelector('b').textContent = SUPERS[k] + ' · ' + arr.length + (arr.length === 1 ? ' producto' : ' productos');
+            sec.querySelector('.av').textContent = nomT(k).charAt(0);
+            sec.querySelector('b').textContent = nomT(k) + ' · ' + arr.length + (arr.length === 1 ? ' producto' : ' productos');
             sec.querySelector('em').textContent = sub > 0.5 ? 'Ahorrás ' + fmt(sub) : '';
             arr.sort((a, b) => b.ahorro - a.ahorro).forEach(f => {
               const c = document.createElement('div'); c.className = 'ah-card';
@@ -2704,8 +2749,8 @@
               else { pp.innerHTML = '<span>Precio <b></b></span>'; pp.querySelector('b').textContent = fmt(con); }
               const bb = c.querySelector('.ah-b');
               if (!base) bb.remove();
-              else if (f.enBase) { bb.innerHTML = '<span></span><em></em>'; bb.children[0].textContent = 'En ' + SUPERS[base.k] + ': ' + fmt(f.enBase.u * f.x.it.qty); bb.children[1].textContent = 'Ahorrás ' + fmt(f.ahorro); }
-              else { bb.innerHTML = '<span></span>'; bb.children[0].textContent = SUPERS[base.k] + ' no lo tiene'; }
+              else if (f.enBase) { bb.innerHTML = '<span></span><em></em>'; bb.children[0].textContent = 'En ' + nomT(base.k) + ': ' + fmt(f.enBase.u * f.x.it.qty); bb.children[1].textContent = 'Ahorrás ' + fmt(f.ahorro); }
+              else { bb.innerHTML = '<span></span>'; bb.children[0].textContent = nomT(base.k) + ' no lo tiene'; }
               sec.appendChild(c);
             });
             cont.appendChild(sec);
@@ -2724,7 +2769,7 @@
     ordenK.forEach(s => {
       const c = document.createElement('button'); c.type = 'button'; c.className = 'uno-chip' + (planTienda === s.k ? ' on' : ''); c.style.setProperty('--tc', COLOR_TIENDA[s.k] || 'var(--line)');
       c.innerHTML = '<b></b><span></span>';
-      c.children[0].textContent = SUPERS[s.k];
+      c.children[0].textContent = nomT(s.k);
       c.children[1].textContent = !s.found ? 'No tiene' : s.found === found ? fmt(s.total) : 'Tiene ' + s.found + ' de ' + found;
       if (!s.found) c.disabled = true;
       c.addEventListener('click', () => { planTienda = planTienda === s.k ? null : s.k; const y = window.scrollY; renderPlan(l, box, res); window.scrollTo(0, y); });
@@ -2743,15 +2788,15 @@
         Object.keys(SUPERS).forEach(o => { const p = res[it.id] && res[it.id][o]; if (!p) return; const u = unitFor(p, it.qty); if (u > 0 && (!alt || u < alt.u)) alt = { o, u }; });
         const sm = row.querySelector('small');
         sm.textContent = fmtQ(it.qty) + (it.qty === 1 ? ' unidad' : ' unidades');
-        if (alt) { sm.append(' · lo tiene '); const em = document.createElement('em'); em.textContent = SUPERS[alt.o] + ' a ' + fmt(alt.u); sm.appendChild(em); }
+        if (alt) { sm.append(' · lo tiene '); const em = document.createElement('em'); em.textContent = nomT(alt.o) + ' a ' + fmt(alt.u); sm.appendChild(em); }
         ul.appendChild(row);
       });
-      abrirModal({ titulo: 'Faltantes en ' + SUPERS[k], sub: falt.length + (falt.length === 1 ? ' producto de tu lista no está' : ' productos de tu lista no están') + ' en ' + SUPERS[k] + '.', cuerpo: ul, acciones: [] });
+      abrirModal({ titulo: 'Faltantes en ' + nomT(k), sub: falt.length + (falt.length === 1 ? ' producto de tu lista no está' : ' productos de tu lista no están') + ' en ' + nomT(k) + '.', cuerpo: ul, acciones: [] });
     }
     const sel = singles.find(s => s.k === planTienda);
     if (sel) {
       const falt = sel.miss.filter(it => !missing.includes(it));
-      box.appendChild(tarjetaOpcion({ titulo: 'Todo en ' + SUPERS[sel.k], total: sel.total, grupos: [[sel.k, { lines: sel.lines, total: sel.total }]],
+      box.appendChild(tarjetaOpcion({ titulo: 'Todo en ' + nomT(sel.k), total: sel.total, grupos: [[sel.k, { lines: sel.lines, total: sel.total }]],
         faltantes: falt, sub: falt.length ? 'Tiene ' + sel.found + ' de ' + found + '.' : 'Tiene tus ' + found + (found === 1 ? ' producto.' : ' productos.') }, -1));
     }
 
@@ -2759,7 +2804,7 @@
 
     if (box.id === 'bPlan') {
       const rerender = () => { const y = window.scrollY; renderPlan(l, box, res); window.scrollTo(0, y); };
-      pintarCruce(l, box, combo, rerender);
+      pintarCruce(l, box, combo, rerender, fuera);
       pintarPacks(l, box, combo, { l, res, rerender });
     }
     if (missing.length) {
