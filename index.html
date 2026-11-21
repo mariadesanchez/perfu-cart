@@ -469,7 +469,12 @@
   .opt .ln .lnp{grid-area:p;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:14px}
   .opt .ln .mini-step button{width:26px;height:26px}
   .opt .ln .lnp.hot{color:var(--price-hot)}
-  .opt .grp .ln{grid-template-areas:"img n n" "img s p" "img o o"}
+  .opt .grp .ln{grid-template-areas:"img n n" "img s p" "img o o" "img c c"}
+  .ln-cmp{grid-area:c;font-size:12px;color:var(--muted);line-height:1.35;margin-top:1px}
+  .ln-cmp b{display:block;font-weight:800}
+  .ln-cmp span span{white-space:nowrap}
+  .ln-cmp b.ok{color:#14935A}
+  .ln-cmp b.no{color:var(--warn)}
   .ln-sec{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 2px;padding-top:10px;border-top:1px dashed var(--line)}
   .ln-sec.on{color:var(--price-hot);border-top:0;padding-top:0;margin-top:8px}
   .ln-sec.off{color:var(--muted)}
@@ -2342,6 +2347,23 @@
               });
             }
             if (of.textContent) ln.appendChild(of);
+          }
+          // Sin oferta: el precio en las otras tiendas, para que se vea que se eligió el más conveniente
+          if (!enOf(x)) {
+            const mio = x.u * x.it.qty;
+            const otros = keys.filter(k2 => k2 !== k).map(k2 => {
+              const p2 = res[x.it.id] && res[x.it.id][k2], u2 = p2 ? unitFor(p2, x.it.qty) : 0;
+              return u2 > 0 ? { k: k2, v: u2 * x.it.qty } : null;
+            }).filter(Boolean).sort((a, b) => a.v - b.v);
+            if (otros.length) {
+              const c = document.createElement('div'); c.className = 'ln-cmp';
+              const masBarato = otros[0].v < mio - 0.5;
+              c.innerHTML = '<b></b><span></span>';
+              c.children[0].className = masBarato ? 'no' : 'ok';
+              c.children[0].textContent = masBarato ? 'Más barato en ' + SUPERS[otros[0].k] : '✓ El más barato';
+              otros.forEach((o, i) => { if (i) c.children[1].append(' · '); const s = document.createElement('span'); s.textContent = SUPERS[o.k] + '\u00a0' + fmt(o.v).replace(' ', '\u00a0'); c.children[1].appendChild(s); });
+              ln.appendChild(c);
+            }
           }
           d.appendChild(ln);
         });
