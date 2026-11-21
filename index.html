@@ -484,6 +484,12 @@
   .cruce-t .a b{color:#14935A}
   .cruce-t .a a,.cruce-app{color:var(--accent-deep, var(--accent));font-weight:700;text-decoration:none}
   .cruce-app{display:inline-block;margin-top:10px;font-size:14px}
+  .cruce-pasar{margin-top:8px;border:0;border-radius:10px;padding:7px 12px;font-weight:800;font-size:13px;color:#fff;background:#14935A;cursor:pointer;box-shadow:0 2px 0 #0d6b41}
+  .pasar-listas{display:grid;gap:8px}
+  .pl-opt{display:block;width:100%;text-align:left;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card);cursor:pointer;color:var(--ink)}
+  .pl-opt b{display:block;font-size:15px}
+  .pl-opt small{color:var(--muted);font-size:12px}
+  .pl-opt:hover{border-color:#14935A}
   .ln-cmp{grid-area:c;font-size:12px;color:var(--muted);line-height:1.35;margin-top:1px}
   .ln-cmp span{white-space:nowrap}
   .ln-cmp span.caro{font-weight:700;color:var(--ink)}
@@ -2269,14 +2275,49 @@
   const paraCruce = it => true;
   // Cruce con la otra app: productos de esta lista que hoy salen más baratos en las tiendas de la otra
   const cacheCruce = new Map();
-  function pintarCruce(l, box, combo){
+  const OTRA_TABLAS = { listas: 'listas', items: 'items' };
+  // Pasar un producto a una lista de la otra app (misma cuenta, misma base): se agrega allá y sale de esta lista
+  async function pasarALaOtra(l, it, otro, alPasar){
+    if (!sb || !user) { toast('Ingresá con Google para pasar productos a ' + OTRA_APP.nombre); return; }
+    const rl = await sb.from(OTRA_TABLAS.listas).select('id,nombre').order('creada');
+    if (rl.error) { toast('No se pudieron traer tus listas de ' + OTRA_APP.nombre + '. Probá de nuevo.'); return; }
+    const pasar = async (rid, nombreNueva) => {
+      try {
+        let lid = rid, nombre = nombreNueva;
+        if (!lid) {
+          const r = await sb.from(OTRA_TABLAS.listas).insert({ user_id: user.id, nombre: String(nombreNueva || 'Mi lista').slice(0, 80), datos: {} }).select('id').single();
+          if (r.error) throw r.error; lid = r.data.id;
+        } else nombre = (rl.data.find(x => x.id === rid) || {}).nombre;
+        const ya = await sb.from(OTRA_TABLAS.items).select('cantidad').eq('lista_id', lid).eq('ean', it.ean).maybeSingle();
+        const cant = Math.max(1, Math.min(999, Math.round((ya.data ? Number(ya.data.cantidad) || 0 : 0) + (+it.qty || 1))));
+        const p = otro.p, of = !!(p.precio_promo && otro.u < p.precio - 0.5);
+        const datos = { id: uid(), price: p.precio, listPrice: p.precio_lista || null, promoPrice: p.precio_promo || null, lleva: lleva(p), promo: p.promo || '',
+          sup: p.tienda, status: 'ok', statusSup: p.tienda };
+        const r = await sb.from(OTRA_TABLAS.items).upsert({ user_id: user.id, lista_id: lid, ean: it.ean, nombre: String(it.name || p.nombre || '').slice(0, 160), cantidad: cant,
+          rubro: it.rubro || '', imagen: it.img || p.imagen || '', link: p.link || '', datos }, { onConflict: 'lista_id,ean' });
+        if (r.error) throw r.error;
+        l.items = l.items.filter(i => i !== it);
+        saveLists(); renderLists(); if (view === 'listas' && typeof renderBuilderItems === 'function') renderBuilderItems();
+        toast('Listo: pasaste ' + (it.name || 'el producto') + ' a «' + nombre + '» de ' + OTRA_APP.nombre + (of ? ' (en oferta en ' + p.tienda + ')' : ''));
+        alPasar();
+      } catch (e) { toast(/500|30 listas/.test((e && e.message) || '') ? e.message : 'No se pudo pasar. Probá de nuevo.'); }
+    };
+    const cuerpo = document.createElement('div'); cuerpo.className = 'pasar-listas';
+    const boton = (txt, sub, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pl-opt'; b.innerHTML = '<b></b><small></small>';
+      b.children[0].textContent = txt; b.children[1].textContent = sub; b.addEventListener('click', () => { cerrarModal(); fn(); }); cuerpo.appendChild(b); };
+    rl.data.forEach(x => boton(x.nombre, 'Lista de ' + OTRA_APP.nombre, () => pasar(x.id)));
+    const nueva = rl.data.some(x => x.nombre === l.name) ? l.name + ' (de ' + (OTRA_APP.nombre === 'Super Cart' ? 'Perfu' : 'Super') + ')' : l.name;
+    boton('+ Nueva lista «' + nueva + '»', 'Se crea en ' + OTRA_APP.nombre, () => pasar(null, nueva));
+    abrirModal({ titulo: 'Pasar a ' + OTRA_APP.nombre, sub: (it.name || 'Este producto') + ' sale ' + fmt(otro.u * it.qty) + ' en ' + otro.p.tienda + '. Elegí a qué lista va; sale de «' + l.name + '».', cuerpo, acciones: [] });
+  }
+  function pintarCruce(l, box, combo, alPasar){
     const cont = document.createElement('div'); cont.className = 'cruce';
     box.appendChild(cont);
     const items = l.items.filter(it => it.ean && /^\d{8,14}$/.test(it.ean) && paraCruce(it));
     if (!items.length) { cont.remove(); return; }
     const mio = new Map();
     combo.forEach((g, k) => g.lines.forEach(x => mio.set(x.it.id, { k, u: x.u })));
-    const clave = items.map(i => i.ean).sort().join(',');
+    const clave = 'todo';
     const pintar = precios => {
       cont.innerHTML = '';
       const filas = [];
@@ -2311,18 +2352,21 @@
         const a = tx.querySelector('.a');
         if (f.dif > 0) { const b = document.createElement('b'); b.textContent = 'Ahorrás ' + fmt(f.dif); a.appendChild(b); }
         if (f.otro.p.link) { const ln = document.createElement('a'); ln.href = f.otro.p.link; ln.target = '_blank'; ln.rel = 'noopener'; ln.textContent = 'Ver en ' + f.otro.p.tienda + ' ›'; a.appendChild(ln); }
+        const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'cruce-pasar'; pb.textContent = 'Pasar a ' + OTRA_APP.nombre;
+        pb.addEventListener('click', () => pasarALaOtra(l, f.it, f.otro, alPasar));
+        tx.appendChild(pb);
         r.appendChild(tx); cont.appendChild(r);
       });
       const ab = document.createElement('a'); ab.className = 'cruce-app'; ab.href = OTRA_APP.url + '/#listas'; ab.target = '_blank'; ab.rel = 'noopener';
       ab.textContent = 'Abrir ' + OTRA_APP.nombre + ' ›'; cont.appendChild(ab);
     };
     const c = cacheCruce.get(clave);
-    if (c && Date.now() - c.t < 10 * 60 * 1000) { pintar(c.precios); return; }
+    if (c && Date.now() - c.t < 10 * 60 * 1000 && items.every(i => c.buscados.has(i.ean))) { pintar(c.precios); return; }
     cont.innerHTML = '<div class="cruce-h"><small><span class="spinner"></span>Buscando tus productos en ' + OTRA_APP.lugar + '…</small></div>';
     fetch(OTRA_APP.url + '/api/cruce', { method: 'POST', headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ items: items.map(i => ({ ean: i.ean, nombre: i.name })), sucursal: (typeof cfg !== 'undefined' && cfg.suc) || '200' }) })
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(d => { const precios = (d && d.precios) || {}; cacheCruce.set(clave, { t: Date.now(), precios }); if (cont.isConnected) pintar(precios); })
+      .then(d => { const precios = (d && d.precios) || {}; cacheCruce.set(clave, { t: Date.now(), precios, buscados: new Set(items.map(i => i.ean)) }); if (cont.isConnected) pintar(precios); })
       .catch(() => cont.remove());
   }
 
@@ -2583,7 +2627,7 @@
 
 
 
-    if (box.id === 'bPlan') pintarCruce(l, box, combo);
+    if (box.id === 'bPlan') pintarCruce(l, box, combo, () => { const y = window.scrollY; renderPlan(l, box, res); window.scrollTo(0, y); });
     if (missing.length) {
       const m = document.createElement('div'); m.className = 'hint';
       m.textContent = 'No encontré en ninguna tienda: ' + missing.map(x => x.name).join(', ') + '.';
