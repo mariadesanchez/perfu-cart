@@ -2355,6 +2355,7 @@
               const p2 = res[x.it.id] && res[x.it.id][k2], u2 = p2 ? unitFor(p2, x.it.qty) : 0;
               return u2 > 0 ? { k: k2, v: u2 * x.it.qty } : null;
             }).filter(Boolean).sort((a, b) => a.v - b.v);
+            if (!otros.length) ln.querySelector('.lnp').classList.add('mejor');   // solo esta tienda lo tiene: igual es el más conveniente
             if (otros.length) {
               const c = document.createElement('div'); c.className = 'ln-cmp';
               // El precio más conveniente en verde (el de esta fila o el de otra tienda); los demás en negrita
