@@ -471,10 +471,10 @@
   .opt .ln .lnp.hot{color:var(--price-hot)}
   .opt .grp .ln{grid-template-areas:"img n n" "img s p" "img o o" "img c c"}
   .ln-cmp{grid-area:c;font-size:12px;color:var(--muted);line-height:1.35;margin-top:1px}
-  .ln-cmp b{display:block;font-weight:800}
-  .ln-cmp span span{white-space:nowrap}
-  .ln-cmp b.ok{color:#14935A}
-  .ln-cmp b.no{color:var(--warn)}
+  .ln-cmp span{white-space:nowrap}
+  .ln-cmp span.caro{font-weight:700;color:var(--ink)}
+  .ln-cmp span.mejor,.opt .ln .lnp.mejor{font-weight:800;color:#14935A}
+  .opt .grp .ln .lnn{font-weight:700}
   .ln-sec{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 2px;padding-top:10px;border-top:1px dashed var(--line)}
   .ln-sec.on{color:var(--price-hot);border-top:0;padding-top:0;margin-top:8px}
   .ln-sec.off{color:var(--muted)}
@@ -2357,11 +2357,11 @@
             }).filter(Boolean).sort((a, b) => a.v - b.v);
             if (otros.length) {
               const c = document.createElement('div'); c.className = 'ln-cmp';
-              const masBarato = otros[0].v < mio - 0.5;
-              c.innerHTML = '<b></b><span></span>';
-              c.children[0].className = masBarato ? 'no' : 'ok';
-              c.children[0].textContent = masBarato ? 'Más barato en ' + SUPERS[otros[0].k] : '✓ El más barato';
-              otros.forEach((o, i) => { if (i) c.children[1].append(' · '); const s = document.createElement('span'); s.textContent = SUPERS[o.k] + '\u00a0' + fmt(o.v).replace(' ', '\u00a0'); c.children[1].appendChild(s); });
+              // El precio más conveniente en verde (el de esta fila o el de otra tienda); los demás en negrita
+              const min = Math.min(mio, otros[0].v);
+              if (mio <= min + 0.5) ln.querySelector('.lnp').classList.add('mejor');
+              c.innerHTML = '<div></div>';
+              otros.forEach((o, i) => { if (i) c.children[0].append(' · '); const s = document.createElement('span'); s.className = o.v <= min + 0.5 ? 'mejor' : 'caro'; s.textContent = SUPERS[o.k] + '\u00a0' + fmt(o.v).replace(' ', '\u00a0'); c.children[0].appendChild(s); });
               ln.appendChild(c);
             }
           }
