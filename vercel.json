@@ -1,6 +1,11 @@
 {
   "cleanUrls": true,
   "functions": {
-    "api/vtex-ofertas.js": { "maxDuration": 30 }
+    "api/vtex-ofertas.js": {
+      "maxDuration": 30
+    },
+    "api/cruce.js": {
+      "maxDuration": 30
+    }
   }
 }

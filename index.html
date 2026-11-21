@@ -470,6 +470,20 @@
   .opt .ln .mini-step button{width:26px;height:26px}
   .opt .ln .lnp.hot{color:var(--price-hot)}
   .opt .grp .ln{grid-template-areas:"img n n" "img s p" "img o o" "img c c"}
+  .cruce{margin:16px 0 4px;border:1.5px dashed color-mix(in srgb, #14935A 55%, var(--line));border-radius:16px;padding:12px 14px;background:color-mix(in srgb, #14935A 6%, var(--card))}
+  .cruce.nada{border-style:solid;border-color:var(--line);background:var(--card)}
+  .cruce-h b{display:block;font-family:var(--display);font-size:16px;margin-bottom:2px}
+  .cruce-h small{display:block;color:var(--muted);font-size:13px;line-height:1.35}
+  .cruce-r{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px dashed var(--line);margin-top:8px}
+  .cruce-t .n{font-weight:700;font-size:14px;line-height:1.3}
+  .cruce-t .v{font-size:13px;margin-top:3px;display:flex;flex-wrap:wrap;gap:2px 10px}
+  .cruce-t .aca{font-weight:700;color:var(--ink)}
+  .cruce-t .otra{font-weight:800;color:#14935A}
+  .cruce-t .otra::before{content:'→ ';color:var(--muted);font-weight:600}
+  .cruce-t .a{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;margin-top:3px}
+  .cruce-t .a b{color:#14935A}
+  .cruce-t .a a,.cruce-app{color:var(--accent-deep, var(--accent));font-weight:700;text-decoration:none}
+  .cruce-app{display:inline-block;margin-top:10px;font-size:14px}
   .ln-cmp{grid-area:c;font-size:12px;color:var(--muted);line-height:1.35;margin-top:1px}
   .ln-cmp span{white-space:nowrap}
   .ln-cmp span.caro{font-weight:700;color:var(--ink)}
@@ -2251,6 +2265,67 @@
 
   let planTienda = null;
   const COLOR_TIENDA = { coto: '#E30613', carrefour: '#1E4B9B', dia: '#E2001A', changomas: '#00A651', jumbo: '#2E9E44', vea: '#D7182A', disco: '#C8102E', farmaonline: '#7DB928', farmacity: '#00A859', simplicity: '#E5007E', pigmento: '#6A2C91', gpsfarma: '#0072BC' };
+  const OTRA_APP = { url: 'https://compras-super-cart.vercel.app', nombre: 'Super Cart', lugar: 'el súper', titulo: 'Más barato en el súper' };
+  const paraCruce = it => true;
+  // Cruce con la otra app: productos de esta lista que hoy salen más baratos en las tiendas de la otra
+  const cacheCruce = new Map();
+  function pintarCruce(l, box, combo){
+    const cont = document.createElement('div'); cont.className = 'cruce';
+    box.appendChild(cont);
+    const items = l.items.filter(it => it.ean && /^\d{8,14}$/.test(it.ean) && paraCruce(it));
+    if (!items.length) { cont.remove(); return; }
+    const mio = new Map();
+    combo.forEach((g, k) => g.lines.forEach(x => mio.set(x.it.id, { k, u: x.u })));
+    const clave = items.map(i => i.ean).sort().join(',');
+    const pintar = precios => {
+      cont.innerHTML = '';
+      const filas = [];
+      items.forEach(it => {
+        const ops = (precios[it.ean] || []).map(p => { const pp = { ...p, promo: [p.promo, p.promo_condicion].filter(Boolean).join(' · ') }; return { p: pp, u: unitFor(pp, it.qty) }; })
+          .filter(o => o.u > 0).sort((a, b) => a.u - b.u);
+        if (!ops.length) return;
+        const otro = ops[0], acá = mio.get(it.id);
+        const dif = acá ? (acá.u - otro.u) * it.qty : null;
+        if (acá && !(dif >= 50 && otro.u < acá.u * 0.98)) return;
+        filas.push({ it, otro, acá, dif });
+      });
+      const h = document.createElement('div'); h.className = 'cruce-h';
+      h.innerHTML = '<b></b><small></small>';
+      h.children[0].textContent = '💡 ' + OTRA_APP.titulo;
+      if (!filas.length) {
+        h.children[1].textContent = 'Revisamos ' + (items.length === 1 ? 'tu producto' : 'tus ' + items.length + ' productos') + ' en ' + OTRA_APP.lugar + ' (' + OTRA_APP.nombre + '): ninguno sale más barato que acá.';
+        cont.classList.add('nada'); cont.appendChild(h); return;
+      }
+      filas.sort((a, b) => (b.dif == null) - (a.dif == null) || (b.dif || 0) - (a.dif || 0));
+      const total = filas.reduce((s, f) => s + (f.dif || 0), 0);
+      h.children[1].textContent = (filas.length === 1 ? 'Un producto de tu lista sale' : filas.length + ' productos de tu lista salen') + ' menos en ' + OTRA_APP.lugar + ' (precios de ' + OTRA_APP.nombre + ')' + (total > 0 ? ': ahorrarías ' + fmt(total) + '.' : '.');
+      cont.appendChild(h);
+      filas.forEach(f => {
+        const r = document.createElement('div'); r.className = 'cruce-r';
+        r.appendChild(fotoMini(f.it.img || f.otro.p.imagen, 'pthumb'));
+        const tx = document.createElement('div'); tx.className = 'cruce-t';
+        tx.innerHTML = '<div class="n"></div><div class="v"><span class="aca"></span><span class="otra"></span></div><div class="a"></div>';
+        tx.querySelector('.n').textContent = (f.it.qty > 1 ? fmtQ(f.it.qty) + ' × ' : '') + f.it.name;
+        tx.querySelector('.aca').textContent = f.acá ? 'Acá: ' + SUPERS[f.acá.k] + ' ' + fmt(f.acá.u * f.it.qty) : 'Acá no lo encontré';
+        tx.querySelector('.otra').textContent = f.otro.p.tienda + ' ' + fmt(f.otro.u * f.it.qty) + (f.otro.p.precio_promo && f.otro.u < f.otro.p.precio - 0.5 ? ' (' + (f.otro.p.promo.split(' · ')[0] || 'oferta') + ')' : '');
+        const a = tx.querySelector('.a');
+        if (f.dif > 0) { const b = document.createElement('b'); b.textContent = 'Ahorrás ' + fmt(f.dif); a.appendChild(b); }
+        if (f.otro.p.link) { const ln = document.createElement('a'); ln.href = f.otro.p.link; ln.target = '_blank'; ln.rel = 'noopener'; ln.textContent = 'Ver en ' + f.otro.p.tienda + ' ›'; a.appendChild(ln); }
+        r.appendChild(tx); cont.appendChild(r);
+      });
+      const ab = document.createElement('a'); ab.className = 'cruce-app'; ab.href = OTRA_APP.url + '/#listas'; ab.target = '_blank'; ab.rel = 'noopener';
+      ab.textContent = 'Abrir ' + OTRA_APP.nombre + ' ›'; cont.appendChild(ab);
+    };
+    const c = cacheCruce.get(clave);
+    if (c && Date.now() - c.t < 10 * 60 * 1000) { pintar(c.precios); return; }
+    cont.innerHTML = '<div class="cruce-h"><small><span class="spinner"></span>Buscando tus productos en ' + OTRA_APP.lugar + '…</small></div>';
+    fetch(OTRA_APP.url + '/api/cruce', { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ items: items.map(i => ({ ean: i.ean, nombre: i.name })), sucursal: (typeof cfg !== 'undefined' && cfg.suc) || '200' }) })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => { const precios = (d && d.precios) || {}; cacheCruce.set(clave, { t: Date.now(), precios }); if (cont.isConnected) pintar(precios); })
+      .catch(() => cont.remove());
+  }
+
   function renderPlan(l, box, res){
     const keys = Object.keys(SUPERS);
     // Opción combinada: cada producto en el súper más barato
@@ -2508,6 +2583,7 @@
 
 
 
+    if (box.id === 'bPlan') pintarCruce(l, box, combo);
     if (missing.length) {
       const m = document.createElement('div'); m.className = 'hint';
       m.textContent = 'No encontré en ninguna tienda: ' + missing.map(x => x.name).join(', ') + '.';
