@@ -185,6 +185,10 @@
   .cmp-head .cmp-name{font-size:15px;color:var(--ink);font-weight:600}
   .cthumb{width:72px;height:72px;flex:none;object-fit:contain;border-radius:12px;background:#fff;border:1px solid var(--line)}
   .lthumb{width:44px;height:44px;flex:none;object-fit:contain;border-radius:8px;background:#fff;border:1px solid var(--line)}
+  .hist{display:block;font-size:13px;color:var(--muted);margin-top:3px;white-space:normal;overflow:visible;line-height:1.35}
+  .hist.low{display:inline-block;max-width:100%;color:#fff;background:#14935A;font-weight:800;border-radius:8px;padding:1px 8px;box-shadow:0 2px 0 #0B5E37}
+  .hist b{color:var(--ink)}
+  .lst-items li span.hist{flex:none;white-space:normal;overflow:visible;text-overflow:clip}
   .pthumb{width:30px;height:30px;flex:none;object-fit:contain;border-radius:6px;background:#fff}
   .lthumb.vacia,.pthumb.vacia,.cthumb.vacia{background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C9B6C4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='2.5' width='8' height='4' rx='1'/%3E%3Cpath d='M9 6.5h6l1.5 3v11a1.5 1.5 0 0 1-1.5 1.5H9A1.5 1.5 0 0 1 7.5 20.5v-11z'/%3E%3Cpath d='M10 13h4'/%3E%3C/svg%3E") center/58% no-repeat}
   .opt .ln{align-items:center}
@@ -2962,6 +2966,58 @@
       box.appendChild(b);
     });
   }
+  // ---------- "¿compro hoy o espero?": precio más bajo que vimos de cada producto (historial diario en Supabase) ----------
+  const HIST_DIAS = 60;
+  const histDatos = new Map(), histPend = new Set(), histInicio = new Map();
+  let histT = null;
+  const superDe = it => { const n = it.sup || ''; return Object.keys(SUPERS).find(k => SUPERS[k] === n) || ''; };
+  const ddmm = iso => { const [y, m, d] = String(iso).split('-'); return d + '/' + m; };
+  function lineaHistorial(it, sp){
+    const k = superDe(it); if (!it.ean || !k || !itemUnit(it)) return;
+    const key = k + '|' + it.ean;
+    if (!histDatos.has(key)) { if (!histPend.has(key)) { histPend.add(key); clearTimeout(histT); histT = setTimeout(traerHistorial, 400); } return; }
+    const h = histDatos.get(key); if (!h || !h.min) return;
+    const hoy = it.promoPrice || it.price || itemUnit(it);
+    const ini = histInicio.get(k); if (!ini) return;
+    const dias = Math.round((Date.now() - new Date(ini + 'T12:00:00').getTime()) / 864e5);
+    if (dias < 3) return;   // todavía muy pocos días para decir algo
+    const rango = dias >= HIST_DIAS ? `de los últimos ${HIST_DIAS} días` : `desde el ${ddmm(ini)}`;
+    const el = document.createElement('span'); el.className = 'hist';
+    if (hoy <= h.min + 0.5) { el.className = 'hist low'; el.textContent = `▼ Precio más bajo ${rango}`; }
+    else {
+      el.innerHTML = `Más bajo ${rango}: <b></b> (${ddmm(h.fecha)})` + (h.ofertas ? ` · ${h.ofertas === 1 ? '1 vez' : h.ofertas + ' veces'} en oferta` : '');
+      el.querySelector('b').textContent = fmt(h.min);
+    }
+    sp.appendChild(el);
+  }
+  async function traerHistorial(){
+    if (!sb || !user || !histPend.size) return;
+    const pend = [...histPend]; histPend.clear();
+    const desde = new Date(Date.now() - HIST_DIAS * 864e5).toISOString().slice(0, 10);
+    const porSuper = new Map(); pend.forEach(key => { const [k, ean] = key.split('|'); if (!porSuper.has(k)) porSuper.set(k, []); porSuper.get(k).push(ean); });
+    try {
+      for (const [k, eans] of porSuper) {
+        if (!histInicio.has(k)) {
+          const r0 = await sb.from('historial_precios').select('fecha').eq('super', k).order('fecha', { ascending: true }).limit(1);
+          histInicio.set(k, r0.data && r0.data[0] ? r0.data[0].fecha : null);
+        }
+        for (let i = 0; i < eans.length; i += 80) {
+          const parte = eans.slice(i, i + 80);
+          const r = await sb.from('historial_precios').select('ean,fecha,hasta,precio,precio_promo').eq('super', k).in('ean', parte).gte('hasta', desde).limit(5000);
+          if (r.error) throw r.error;
+          parte.forEach(e => histDatos.set(k + '|' + e, null));
+          r.data.forEach(f => {
+            const p = f.precio_promo != null ? Number(f.precio_promo) : (f.precio != null ? Number(f.precio) : null); if (!p) return;
+            const key = k + '|' + f.ean, h = histDatos.get(key) || { min: Infinity, fecha: '', ofertas: 0 };
+            if (p < h.min) { h.min = p; h.fecha = f.fecha < desde ? desde : f.fecha; }
+            if (f.precio_promo != null) h.ofertas++;
+            histDatos.set(key, h);
+          });
+        }
+      }
+    } catch (e) { console.warn('historial', e); pend.forEach(key => histDatos.set(key, null)); return; }
+    if (view === 'listas') renderBuilderItems();
+  }
   function renderBuilderItems(){
     const l = ensureList(); const ul = $('bItems'); ul.innerHTML = '';
     [...$('bList').options].forEach(o => { const x = lists.find(y => y.id === o.value); if (x) o.textContent = `${x.name} (${x.items.length})`; });
@@ -3054,6 +3110,7 @@
         if (u !== it.price) lp.querySelector('em').textContent = fmt(u) + ' (' + (it.promo || 'oferta').split(' · ')[0] + ')';
       } else lp.textContent = itemStatus(it) ? 'No incorporado a la lista: no suma al total' : 'Sin precio: tocá Actualizar';
       sp.appendChild(lp);
+      lineaHistorial(it, sp);
       const st = itemStatus(it), S = it.statusSup || it.sup || 'esta tienda';
       if (st === 'notfound' || st === 'nostock' || st === 'error') {
         const w = document.createElement('span'); w.className = 'warn' + (st === 'error' ? ' err' : '');
