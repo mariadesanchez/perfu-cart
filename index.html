@@ -747,6 +747,7 @@
   a.it-link:hover,a.it-link:focus-visible{color:#7B2FF7;text-decoration:underline;text-underline-offset:3px}
   .lthumb.con-link{cursor:pointer}
   .lthumb.con-link:hover{outline:2px solid #C9B2FF;outline-offset:1px}
+  .cruce-sub{margin-top:10px}
 </style>
 </head>
 <body class="gated">
@@ -2494,18 +2495,61 @@
     const mio = new Map();
     combo.forEach((g, k) => g.lines.forEach(x => mio.set(x.it.id, { k, u: x.u })));
     const clave = 'todo';
+    // Ofertas de la otra app que convienen llevando más unidades ("50% 2da · Llevando 2"): se sugieren con un botón
+    const consejosLlevar = () => {
+      const cc = cacheCruce.get(clave), out = new Map();
+      if (!cc) return [];
+      items.forEach(it => {
+        if (fuera.has(it.id)) return;
+        const acá = mio.get(it.id); if (!acá) return;
+        (cc.precios[it.ean] || []).forEach(p0 => {
+          const p = { ...p0, promo: [p0.promo, p0.promo_condicion].filter(Boolean).join(' · ') }, n = lleva(p);
+          if (n <= it.qty || n > 12) return;
+          const u = unitFor(p, n);
+          if (u > 0 && conviene(u * n, acá.u * n) && (!out.has(it.id) || u < out.get(it.id).u)) out.set(it.id, { it, p, n, u, acá });
+        });
+      });
+      return [...out.values()];
+    };
+    const pintarConsejos = tips => {
+      if (!tips.length) return;
+      const st = document.createElement('div'); st.className = 'cruce-h cruce-sub'; st.innerHTML = '<small></small>';
+      st.children[0].textContent = tips.length === 1 ? 'Y llevando más unidades, este te sale menos en ' + OTRA_APP.lugar + ':' : 'Y llevando más unidades, estos te salen menos en ' + OTRA_APP.lugar + ':';
+      cont.appendChild(st);
+      tips.forEach(t => {
+        const r = document.createElement('div'); r.className = 'cruce-r';
+        r.appendChild(fotoMini(t.it.img || t.p.imagen, 'pthumb'));
+        const tx = document.createElement('div'); tx.className = 'cruce-t';
+        tx.innerHTML = '<div class="n"></div><div class="v"><span class="aca"></span><span class="otra"></span></div><div class="a"></div>';
+        tx.querySelector('.n').textContent = t.it.name;
+        tx.querySelector('.aca').textContent = 'Acá: ' + nomT(t.acá.k) + ' ' + fmt(t.acá.u) + ' c/u';
+        tx.querySelector('.otra').textContent = t.p.tienda + ' ' + fmt(t.u) + ' c/u llevando ' + t.n + ' (' + String(t.p.promo || 'oferta').split(' · ')[0] + ')';
+        const a = tx.querySelector('.a');
+        const b = document.createElement('b'); b.textContent = 'Ahorrás ' + fmt((t.acá.u - t.u) * t.n) + ' en ' + t.n; a.appendChild(b);
+        if (t.p.link) { const ln = document.createElement('a'); ln.href = t.p.link; ln.target = '_blank'; ln.rel = 'noopener'; ln.textContent = 'Ver en ' + t.p.tienda + ' ›'; a.appendChild(ln); }
+        const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'cruce-pasar'; pb.textContent = 'Llevar ' + t.n;
+        pb.addEventListener('click', () => {
+          t.it.qty = t.n; saveLists(); renderLists(); if (view === 'listas' && typeof renderBuilderItems === 'function') renderBuilderItems();
+          toast('Ahora llevás ' + t.n + ': aprovechás la oferta de ' + t.p.tienda);
+          alPasar();
+        });
+        tx.appendChild(pb); r.appendChild(tx); cont.appendChild(r);
+      });
+    };
     const pintar = () => {
       cont.innerHTML = '';
       const fs = [...fuera.values()].filter(f => f.tipo === 'cruce');
       const h = document.createElement('div'); h.className = 'cruce-h'; h.innerHTML = '<b></b><small></small>';
       h.children[0].textContent = '💡 ' + OTRA_APP.titulo;
+      const tips = consejosLlevar();
       if (!fs.length) {
-        h.children[1].textContent = 'Revisamos ' + (items.length === 1 ? 'tu producto' : 'tus ' + items.length + ' productos') + ' en ' + OTRA_APP.lugar + ' (' + OTRA_APP.nombre + '): ninguno sale más barato que acá.';
-        cont.classList.add('nada'); cont.appendChild(h); return;
+        h.children[1].textContent = 'Revisamos ' + (items.length === 1 ? 'tu producto' : 'tus ' + items.length + ' productos') + ' en ' + OTRA_APP.lugar + ' (' + OTRA_APP.nombre + '): ' + (tips.length ? 'con la cantidad que llevás, ninguno sale más barato que acá.' : 'ninguno sale más barato que acá.');
+        if (!tips.length) cont.classList.add('nada');
+        cont.appendChild(h); pintarConsejos(tips); return;
       }
       const ah = fs.reduce((s, f) => s + (f.aqui ? f.aqui.u * f.qty - f.total : 0), 0);
       h.children[1].textContent = (fs.length === 1 ? 'Un producto de tu lista sale' : fs.length + ' productos de tu lista salen') + ' menos en ' + OTRA_APP.lugar + (ah > 0 ? ' (ahorrás ' + fmt(ah) + ')' : '') + ': ya están en tu carrito más conveniente, y tachados en la tienda de acá donde iban.';
-      cont.appendChild(h);
+      cont.appendChild(h); pintarConsejos(consejosLlevar());
     };
     const c = cacheCruce.get(clave);
     if (c && Date.now() - c.t < 10 * 60 * 1000 && items.every(i => c.buscados.has(i.ean))) { pintar(); return; }
@@ -2652,7 +2696,7 @@
   }
 
   // Productos de la lista que conviene comprar en una tienda de la otra app (por el cruce o por comprar sueltos en vez del pack)
-  const conviene = (allá, acá) => allá < acá - 50 && allá < acá * 0.98;
+  const conviene = (allá, acá) => allá < acá - 50 && allá < acá * 0.99;   // al menos $50 y 1% menos
   function calcularFuera(l, res){
     const out = new Map(), c = cacheCruce.get('todo'), vivo = x => x && Date.now() - x.t < 10 * 60 * 1000;
     l.items.forEach(it => {
