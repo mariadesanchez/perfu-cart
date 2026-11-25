@@ -4214,7 +4214,7 @@
   async function login(hint){
     if (typeof hint !== 'string' || !hint) { irAlInicio(); return; }
     if (!sb) { $('loginErr').textContent = 'El ingreso todavía no está disponible.'; $('loginErr').hidden = false; go('cuenta'); return; }
-    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { queryParams: { login_hint: hint }, redirectTo: location.origin + '/#listas' } });
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { queryParams: { login_hint: hint }, redirectTo: location.origin + '/' + (location.hash && location.hash.length > 1 ? location.hash : '#listas') } });
     if (error) { $('loginErr').textContent = 'No se pudo ingresar. Probá de nuevo.'; $('loginErr').hidden = false; }
   }
   // Ingreso con el botón de Google dentro de la página: Google muestra la dirección de la app
