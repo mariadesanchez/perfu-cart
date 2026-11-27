@@ -291,6 +291,10 @@
   /* Título de la lista con el color de la sección (sin letras infladas) */
   :root{--sec1:#4FD9A6;--sec2:#149A6E}
   .lhead-t{flex-direction:row!important;align-items:center;gap:12px}
+  /* Belleza Cart (Cuidado y Belleza) */
+  .bz-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .bz-chips button{appearance:none;border:1.5px solid color-mix(in srgb, var(--sec1) 45%, var(--line));background:color-mix(in srgb, var(--sec1) 10%, var(--card));color:var(--ink);font:inherit;font-weight:700;font-size:14px;border-radius:999px;padding:7px 13px;cursor:pointer}
+  .bz-chips button:hover{border-color:var(--sec2)}
   .lname-ic{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb, var(--sec1) 18%, var(--card));border:2px solid color-mix(in srgb, var(--sec1) 55%, transparent)}
   .lname-ic svg{width:24px;height:24px;fill:none;stroke:var(--sec2);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
   .lhead-t b#lName{font-family:var(--display);font-weight:800;font-size:27px;letter-spacing:-.015em;background:linear-gradient(120deg,var(--sec1),var(--sec2));-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:2px}
@@ -1054,19 +1058,23 @@
 
   <section class="card" id="prodCard" data-view="inicio">
     <h2><span id="prodTitle">Buscá un producto</span></h2>
-    <div class="hint" style="margin-top:-6px">Escribí el nombre o el código de barras: buscamos en las 5 tiendas a la vez.</div>
+    <div class="hint" style="margin-top:-6px">Escribí el nombre o el código de barras: buscamos en las 6 tiendas a la vez.</div>
     <div class="seg" id="superSel" role="tablist" aria-label="Tienda" style="margin-top:12px" hidden>
       <button type="button" role="tab" data-super="farmaonline">Farmaonline</button>
       <button type="button" role="tab" data-super="farmacity">Farmacity</button>
       <button type="button" role="tab" data-super="simplicity">Simplicity</button>
       <button type="button" role="tab" data-super="pigmento">Pigmento</button>
       <button type="button" role="tab" data-super="gpsfarma">GPS Farma</button>
+      <button type="button" role="tab" data-super="andromaco">Andrómaco</button>
     </div>
     <div class="hint" style="margin:-4px 0 8px" hidden>Buscando en <b id="cotoSuc"></b></div>
     <form id="cotoForm" class="row" autocomplete="off">
       <input type="text" id="cotoQ" placeholder="Ej: perfume, labial o código de barras" enterkeyhint="search" style="flex:1" aria-label="Nombre o código de barras">
       <button class="btn btn-primary" type="submit" style="padding:12px 16px">Buscar</button>
     </form>
+    <div class="bz-chips" id="bzChips" hidden aria-label="Búsquedas rápidas">
+      <button type="button" data-q="protector solar">☀️ Protector solar</button><button type="button" data-q="crema facial">🧴 Crema facial</button><button type="button" data-q="serum">💧 Sérum</button><button type="button" data-q="shampoo">🫧 Shampoo</button><button type="button" data-q="maquillaje">💄 Maquillaje</button><button type="button" data-q="dermaglos">✨ Dermaglós</button>
+    </div>
     <div class="preview" id="preview"><img id="previewImg" alt=""></div>
     <div id="reader"></div>
     <div id="fileReader"></div>
@@ -1158,6 +1166,7 @@
           <label><input type="checkbox" value="simplicity"><span>Simplicity</span></label>
           <label><input type="checkbox" value="pigmento"><span>Pigmento</span></label>
           <label><input type="checkbox" value="gpsfarma"><span>GPS Farma</span></label>
+          <label><input type="checkbox" value="andromaco"><span>Andrómaco</span></label>
         </div>
         <p class="hint" id="supersTxt" style="margin:6px 0 0"></p>
       </div>
@@ -1307,6 +1316,35 @@
 </div></div>
 <div class="toast" id="toast"></div>
 
+<script>
+  // ---------- Belleza Cart: la sección "Cuidado y Belleza" de Perfu (/belleza), con las tiendas de Perfu y Andrómaco.
+  // Comparte las listas con Perfu; cambia el nombre, el logo, los colores y el cartel de arriba.
+  window.APP_BELLEZA = /^\/belleza\/?$/.test(location.pathname);
+  if (window.APP_BELLEZA) {
+    document.title = 'Belleza Cart';
+    document.documentElement.style.setProperty('--sec1', '#E79BEA'); document.documentElement.style.setProperty('--sec2', '#B43FC0');
+    const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = '#B43FC0';
+    const lg = document.querySelector('#hero .logo');
+    if (lg) {
+      lg.setAttribute('aria-label', 'Belleza Cart');
+      const st = lg.querySelectorAll('#celeste stop'); ['#FBE3FF', '#E58CEB', '#B43FC0'].forEach((c, i) => st[i] && st[i].setAttribute('stop-color', c));
+      const tx = lg.querySelectorAll('text');
+      if (tx[0]) {
+        tx[0].textContent = ''; const dy = [0, -4, 6, -7, 4, -5, 6];
+        [...'Belleza'].forEach((ch, i) => { const sp = document.createElementNS('http://www.w3.org/2000/svg', 'tspan'); sp.textContent = ch; if (i) { sp.setAttribute('dx', 4); sp.setAttribute('dy', dy[i]); } tx[0].appendChild(sp); });
+        tx[0].setAttribute('rotate', '-7 4 -5 6 -3 5 -4'); tx[0].setAttribute('font-size', '84'); tx[0].setAttribute('textLength', '345'); tx[0].setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      }
+    }
+    const h1 = document.querySelector('#hero h1'); if (h1) h1.textContent = 'Tu cuidado y belleza, al mejor precio';
+    const run = document.querySelector('.ticker .run');
+    if (run) {
+      const fr = ['💄 Cuidado y belleza al mejor precio', '🧴 Dermocosmética, protección solar, cuidado facial y capilar', '🏷️ Andrómaco, Farmacity, Farmaonline, Simplicity, Pigmento y GPS Farma', '🔎 El mismo producto en todas las tiendas, por código de barras', '📧 Tu lista con los precios de hoy, en tu mail'];
+      run.innerHTML = ''; fr.concat(fr).forEach(t => { const sp = document.createElement('span'); sp.textContent = t; run.appendChild(sp); });
+    }
+    const chips = document.getElementById('bzChips'); if (chips) chips.hidden = false;
+    const q = document.getElementById('cotoQ'); if (q) q.placeholder = 'Ej: protector solar, crema facial o código';
+  }
+</script>
 <script src="/vendor/zxing-reader.js"></script>
 <script>
 (function(){
@@ -1509,10 +1547,10 @@
   const nomT = k => SUPERS[k] || OTRAS_TIENDAS[k] || k;
   const superKey = () => Object.fromEntries(Object.entries({ ...OTRAS_TIENDAS, ...SUPERS }).map(([k, v]) => [v, k]));
   // Estas tiendas no aceptan un carrito armado desde otra página: se muestran los productos con su enlace
-  const SIN_CARRO = { gpsfarma: 1, coto: 1, carrefour: 1, jumbo: 1, vea: 1, disco: 1 };
+  const SIN_CARRO = { gpsfarma: 1, andromaco: 1, coto: 1, carrefour: 1, jumbo: 1, vea: 1, disco: 1 };
   // Cargan el carrito pero después muestran su portada: hay que tocar Carrito
   const VA_A_PORTADA = { farmacity: 1, simplicity: 1 };
-  const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', gpsfarma: 'https://gpsfarma.com',
+  const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', andromaco: 'https://tienda.andromaco.com', gpsfarma: 'https://gpsfarma.com',
     coto: 'https://www.coto.com.ar', carrefour: 'https://www.carrefour.com.ar', dia: 'https://diaonline.supermercadosdia.com.ar', changomas: 'https://www.masonline.com.ar', jumbo: 'https://www.jumbo.com.ar', vea: 'https://www.vea.com.ar', disco: 'https://www.disco.com.ar' };
   function renderBuy(groups){
     const bx = $('buyBox'); bx.innerHTML = '';
@@ -1545,7 +1583,7 @@
     d.innerHTML = '<b></b>'; d.querySelector('b').textContent = titulo;
     items.forEach(it => {
       const a = document.createElement('a'); a.target = '_blank'; a.rel = 'noopener';
-      a.href = it.link || (TIENDA_HOST[k] + '/' + (k === 'gpsfarma' ? 'catalogsearch/result/?q=' : '') + encodeURIComponent(it.ean || it.name) + (k === 'gpsfarma' ? '' : '?_q=' + encodeURIComponent(it.ean || it.name) + '&map=ft'));
+      a.href = it.link || (k === 'andromaco' ? TIENDA_HOST[k] + '/search?q=' + encodeURIComponent(it.ean || it.name) : TIENDA_HOST[k] + '/' + (k === 'gpsfarma' ? 'catalogsearch/result/?q=' : '') + encodeURIComponent(it.ean || it.name) + (k === 'gpsfarma' ? '' : '?_q=' + encodeURIComponent(it.ean || it.name) + '&map=ft'));
       a.innerHTML = '<span></span><span></span>';
       a.children[0].textContent = fmtQ(Math.max(1, Math.ceil(it.qty))) + ' × ' + it.name; a.children[1].textContent = 'Abrir ›';
       d.appendChild(a);
@@ -1682,7 +1720,7 @@
 
   // ---------- ajustes ----------
   let cfg = Object.assign({ suc: '200', auto: true, super: 'farmaonline' }, store.get('super-ajustes', {}));
-  const SUPERS = { farmaonline: 'Farmaonline', farmacity: 'Farmacity', simplicity: 'Simplicity', pigmento: 'Pigmento', gpsfarma: 'GPS Farma' };
+  const SUPERS = { farmaonline: 'Farmaonline', farmacity: 'Farmacity', simplicity: 'Simplicity', pigmento: 'Pigmento', gpsfarma: 'GPS Farma', andromaco: 'Andrómaco' };
   if (!SUPERS[cfg.super]) cfg.super = 'farmaonline';
   function showCfg(){
     $('cfgSuc').value = cfg.suc || '200';
@@ -1956,6 +1994,12 @@
     gs.slice(0, 30).forEach(g => grid.appendChild(searchCard(g)));
     box.appendChild(grid);
   }
+  // Búsquedas rápidas de Belleza Cart
+  $('bzChips').addEventListener('click', e => {
+    const b = e.target.closest('button[data-q]'); if (!b) return;
+    $('bzChips').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    $('cotoQ').value = b.dataset.q; $('cotoForm').requestSubmit();
+  });
   $('cotoForm').addEventListener('submit', e => {
     e.preventDefault();
     const v = $('cotoQ').value.trim(); if (!v) return;
@@ -2575,7 +2619,7 @@
   }
 
   let planTienda = null;
-  const COLOR_TIENDA = { coto: '#E30613', carrefour: '#1E4B9B', dia: '#E2001A', changomas: '#00A651', jumbo: '#2E9E44', vea: '#D7182A', disco: '#C8102E', farmaonline: '#7DB928', farmacity: '#00A859', simplicity: '#E5007E', pigmento: '#6A2C91', gpsfarma: '#0072BC' };
+  const COLOR_TIENDA = { coto: '#E30613', carrefour: '#1E4B9B', dia: '#E2001A', changomas: '#00A651', jumbo: '#2E9E44', vea: '#D7182A', disco: '#C8102E', farmaonline: '#7DB928', farmacity: '#00A859', simplicity: '#E5007E', pigmento: '#6A2C91', gpsfarma: '#0072BC' , andromaco: '#0E5AA7' };
   const OTRA_APP = { url: 'https://compras-super-cart.vercel.app', nombre: 'Super Cart', lugar: 'el súper', titulo: 'Más barato en el súper' };
   const paraCruce = it => true;
   // Cruce con la otra app: productos de esta lista que hoy salen más baratos en las tiendas de la otra
@@ -3221,7 +3265,7 @@
   const ICO_TACHO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
   const escL = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // La lista que se llama "Mi lista" (la de siempre) se muestra con el nombre de la sección: "Tecno Lista", "Super Lista"…
-  function nombreLista(n){ return !n || /^mi lista$/i.test(String(n).trim()) ? 'Perfu' + ' Lista' : n; }
+  function nombreLista(n){ return !n || /^mi lista$/i.test(String(n).trim()) ? (window.APP_BELLEZA ? 'Belleza' : 'Perfu') + ' Lista' : n; }
   function pintarListasModal(editId, creando){
     const rows = $('lmodRows'); if (!rows) return;
     const cur = ensureList();
@@ -4156,7 +4200,7 @@
 
   // ---------- cuenta de Google (Supabase) ----------
   let sb = null, user = null, perfil = null, sessionUid = null, esAdmin = false, tieneSupers = true;
-  const SUPERS_MAIL = ['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'gpsfarma'];
+  const SUPERS_MAIL = ['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'gpsfarma', 'andromaco'];
   async function initSupabase(){
     try {
       const c = await (await fetch('/api/config')).json();
@@ -4413,7 +4457,7 @@
   async function login(hint){
     if (typeof hint !== 'string' || !hint) { irAlInicio(); return; }
     if (!sb) { $('loginErr').textContent = 'El ingreso todavía no está disponible.'; $('loginErr').hidden = false; go('cuenta'); return; }
-    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { queryParams: { login_hint: hint }, redirectTo: location.origin + '/' + (location.hash && location.hash.length > 1 ? location.hash : '#listas') } });
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { queryParams: { login_hint: hint }, redirectTo: location.origin + (window.APP_BELLEZA ? '/belleza' : '/') + (location.hash && location.hash.length > 1 ? location.hash : '#listas') } });
     if (error) { $('loginErr').textContent = 'No se pudo ingresar. Probá de nuevo.'; $('loginErr').hidden = false; }
   }
   // Ingreso con el botón de Google dentro de la página: Google muestra la dirección de la app
@@ -4523,7 +4567,7 @@
     const sup = Array.isArray(p.supers) && p.supers.length ? p.supers : SUPERS_MAIL;
     $('supersBox').hidden = (p.modo || 'resumen') !== 'resumen';
     document.querySelectorAll('#supersSel input').forEach(c => { c.checked = sup.includes(c.value); c.disabled = c.checked && sup.length === 1; });
-    const nom = { farmaonline: 'Farmaonline', farmacity: 'Farmacity', simplicity: 'Simplicity', pigmento: 'Pigmento', gpsfarma: 'GPS Farma' };
+    const nom = { farmaonline: 'Farmaonline', farmacity: 'Farmacity', simplicity: 'Simplicity', pigmento: 'Pigmento', gpsfarma: 'GPS Farma', andromaco: 'Andrómaco' };
     $('supersTxt').textContent = sup.length > 1 ? `Te llega un solo mail comparando ${sup.map(s => nom[s]).join(', ').replace(/, ([^,]*)$/, ' y $1')}: el total de tu lista en cada uno y el precio de cada producto, con el más barato marcado.` : `Te llegan los precios de ${nom[sup[0]]}, con las ofertas arriba.`;
     // Listas que van al mail ("Recibir en el mail" por lista; se guarda en la columna en_mail)
     const enM = lists.filter(l => l.enMail !== false);

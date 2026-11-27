@@ -124,3 +124,9 @@ begin
 end $$;
 revoke all on function public.perfu_baja_avisos(uuid) from public;
 grant execute on function public.perfu_baja_avisos(uuid) to anon, authenticated;
+
+-- Andrómaco (Belleza Cart): se suma a las tiendas válidas y a los perfiles que ya existen
+alter table public.perfu_perfiles drop constraint if exists perfu_supers_validos;
+alter table public.perfu_perfiles add constraint perfu_supers_validos check (cardinality(supers) > 0 and supers <@ array['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'gpsfarma', 'andromaco']);
+alter table public.perfu_perfiles alter column supers set default array['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'gpsfarma', 'andromaco'];
+update public.perfu_perfiles set supers = supers || array['andromaco'] where not (supers @> array['andromaco']);

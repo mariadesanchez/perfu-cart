@@ -5,7 +5,7 @@
 // Reusa /api/vtex (y /api/coto) de esta misma app, que ya tienen su caché.
 const APP = 'Perfu Cart';
 const TIENDAS = [{ k: 'farmaonline', nombre: 'Farmaonline' }, { k: 'farmacity', nombre: 'Farmacity' }, { k: 'simplicity', nombre: 'Simplicity' },
-  { k: 'pigmento', nombre: 'Pigmento' }, { k: 'gpsfarma', nombre: 'GPS Farma', porNombre: true }];
+  { k: 'pigmento', nombre: 'Pigmento' }, { k: 'gpsfarma', nombre: 'GPS Farma', porNombre: true }, { k: 'andromaco', nombre: 'Andrómaco' }];
 const ORIGENES = ['https://compras-super-cart.vercel.app', 'https://super-sale-coto.vercel.app', 'https://perfu-cart.vercel.app'];
 const MAX_ITEMS = 80, A_LA_VEZ = 24;
 

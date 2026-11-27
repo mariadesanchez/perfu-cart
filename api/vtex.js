@@ -9,8 +9,10 @@ const TIENDAS = {
   simplicity:  { nombre: 'Simplicity',  host: 'https://www.simplicity.com.ar' },
   pigmento:    { nombre: 'Pigmento',    host: 'https://www.perfumeriaspigmento.com.ar' },
   gpsfarma:    { nombre: 'GPS Farma',   host: 'https://gpsfarma.com', magento: true },
+  andromaco:   { nombre: 'Andrómaco',   host: 'https://tienda.andromaco.com', sfcc: true },
 };
 const gps = require('../lib/gps.js');
+const andromaco = require('../lib/andromaco.js');
 
 async function buscar(host, params) {
   const url = host + '/api/catalog_system/pub/products/search?' + params;
@@ -153,7 +155,11 @@ async function handler(req, res) {
   try {
     let productos = [];
     let buscadoPor = '';
-    if (tienda.magento) {
+    if (tienda.sfcc) {
+      productos = await andromaco.buscar({ ean, q, limite });
+      buscadoPor = ean && productos.some(p => p.exacto) ? 'codigo' : 'nombre';
+    }
+    else if (tienda.magento) {
       productos = await gps.buscar({ ean, q, limite }, leerPromos);
       buscadoPor = ean && productos.some(p => p.exacto) ? 'codigo' : 'nombre';
     }
@@ -161,7 +167,7 @@ async function handler(req, res) {
       productos = mapear(await buscar(tienda.host, 'fq=alternateIds_Ean:' + encodeURIComponent(ean)), ean);
       buscadoPor = 'codigo';
     }
-    if (!tienda.magento && !productos.length && q) {
+    if (!tienda.magento && !tienda.sfcc && !productos.length && q) {
       productos = mapear(await buscar(tienda.host, `ft=${encodeURIComponent(q)}&_from=0&_to=${limite - 1}`), ean);
       buscadoPor = 'nombre';
     }

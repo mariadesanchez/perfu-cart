@@ -7,5 +7,11 @@
     "api/cruce.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/belleza",
+      "destination": "/"
+    }
+  ]
 }
