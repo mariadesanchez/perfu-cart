@@ -136,3 +136,9 @@ alter table public.perfu_perfiles drop constraint if exists perfu_supers_validos
 alter table public.perfu_perfiles add constraint perfu_supers_validos check (cardinality(supers) > 0 and supers <@ array['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'gpsfarma', 'andromaco', 'bago']);
 alter table public.perfu_perfiles alter column supers set default array['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'gpsfarma', 'andromaco', 'bago'];
 update public.perfu_perfiles set supers = supers || array['bago'] where not (supers @> array['bago']);
+
+-- Juleriaque y Rouge (perfumerías)
+alter table public.perfu_perfiles drop constraint if exists perfu_supers_validos;
+alter table public.perfu_perfiles add constraint perfu_supers_validos check (cardinality(supers) > 0 and supers <@ array['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'juleriaque', 'rouge', 'gpsfarma', 'andromaco', 'bago']);
+alter table public.perfu_perfiles alter column supers set default array['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'juleriaque', 'rouge', 'gpsfarma', 'andromaco', 'bago'];
+update public.perfu_perfiles set supers = supers || array['juleriaque', 'rouge'] where not supers @> array['juleriaque'];

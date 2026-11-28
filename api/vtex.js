@@ -8,6 +8,8 @@ const TIENDAS = {
   farmacity:   { nombre: 'Farmacity',   host: 'https://www.farmacity.com' },
   simplicity:  { nombre: 'Simplicity',  host: 'https://www.simplicity.com.ar' },
   pigmento:    { nombre: 'Pigmento',    host: 'https://www.perfumeriaspigmento.com.ar' },
+  juleriaque:  { nombre: 'Juleriaque',  host: 'https://www.juleriaque.com.ar' },
+  rouge:       { nombre: 'Rouge',       host: 'https://www.perfumeriasrouge.com' },
   gpsfarma:    { nombre: 'GPS Farma',   host: 'https://gpsfarma.com', magento: true },
   andromaco:   { nombre: 'Andrómaco',   host: 'https://tienda.andromaco.com', sfcc: true },
   bago:        { nombre: 'Nutricia Bagó', host: 'https://tiendanutriciabago.com.ar', shopify: true },

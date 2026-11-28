@@ -1058,13 +1058,15 @@
 
   <section class="card" id="prodCard" data-view="inicio">
     <h2><span id="prodTitle">Buscá un producto</span></h2>
-    <div class="hint" style="margin-top:-6px">Escribí el nombre o el código de barras: buscamos en las 7 tiendas a la vez.</div>
+    <div class="hint" style="margin-top:-6px">Escribí el nombre o el código de barras: buscamos en las 9 tiendas a la vez.</div>
     <div class="seg" id="superSel" role="tablist" aria-label="Tienda" style="margin-top:12px" hidden>
       <button type="button" role="tab" data-super="farmaonline">Farmaonline</button>
       <button type="button" role="tab" data-super="farmacity">Farmacity</button>
       <button type="button" role="tab" data-super="simplicity">Simplicity</button>
       <button type="button" role="tab" data-super="pigmento">Pigmento</button>
       <button type="button" role="tab" data-super="gpsfarma">GPS Farma</button>
+      <button type="button" role="tab" data-super="juleriaque">Juleriaque</button>
+      <button type="button" role="tab" data-super="rouge">Rouge</button>
       <button type="button" role="tab" data-super="andromaco">Andrómaco</button>
       <button type="button" role="tab" data-super="bago">Nutricia Bagó</button>
     </div>
@@ -1167,6 +1169,8 @@
           <label><input type="checkbox" value="simplicity"><span>Simplicity</span></label>
           <label><input type="checkbox" value="pigmento"><span>Pigmento</span></label>
           <label><input type="checkbox" value="gpsfarma"><span>GPS Farma</span></label>
+          <label><input type="checkbox" value="juleriaque"><span>Juleriaque</span></label>
+          <label><input type="checkbox" value="rouge"><span>Rouge</span></label>
           <label><input type="checkbox" value="andromaco"><span>Andrómaco</span></label>
           <label><input type="checkbox" value="bago"><span>Nutricia Bagó</span></label>
         </div>
@@ -1552,7 +1556,7 @@
   const SIN_CARRO = { gpsfarma: 1, andromaco: 1, bago: 1, coto: 1, carrefour: 1, jumbo: 1, vea: 1, disco: 1 };
   // Cargan el carrito pero después muestran su portada: hay que tocar Carrito
   const VA_A_PORTADA = { farmacity: 1, simplicity: 1 };
-  const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', andromaco: 'https://tienda.andromaco.com', bago: 'https://tiendanutriciabago.com.ar', gpsfarma: 'https://gpsfarma.com',
+  const TIENDA_HOST = { farmaonline: 'https://www.farmaonline.com', farmacity: 'https://www.farmacity.com', simplicity: 'https://www.simplicity.com.ar', pigmento: 'https://www.perfumeriaspigmento.com.ar', juleriaque: 'https://www.juleriaque.com.ar', rouge: 'https://www.perfumeriasrouge.com', andromaco: 'https://tienda.andromaco.com', bago: 'https://tiendanutriciabago.com.ar', gpsfarma: 'https://gpsfarma.com',
     coto: 'https://www.coto.com.ar', carrefour: 'https://www.carrefour.com.ar', dia: 'https://diaonline.supermercadosdia.com.ar', changomas: 'https://www.masonline.com.ar', jumbo: 'https://www.jumbo.com.ar', vea: 'https://www.vea.com.ar', disco: 'https://www.disco.com.ar' };
   function renderBuy(groups){
     const bx = $('buyBox'); bx.innerHTML = '';
@@ -1722,7 +1726,7 @@
 
   // ---------- ajustes ----------
   let cfg = Object.assign({ suc: '200', auto: true, super: 'farmaonline' }, store.get('super-ajustes', {}));
-  const SUPERS = { farmaonline: 'Farmaonline', farmacity: 'Farmacity', simplicity: 'Simplicity', pigmento: 'Pigmento', gpsfarma: 'GPS Farma', andromaco: 'Andrómaco', bago: 'Nutricia Bagó' };
+  const SUPERS = { farmaonline: 'Farmaonline', farmacity: 'Farmacity', simplicity: 'Simplicity', pigmento: 'Pigmento', juleriaque: 'Juleriaque', rouge: 'Rouge', gpsfarma: 'GPS Farma', andromaco: 'Andrómaco', bago: 'Nutricia Bagó' };
   if (!SUPERS[cfg.super]) cfg.super = 'farmaonline';
   function showCfg(){
     $('cfgSuc').value = cfg.suc || '200';
@@ -2621,7 +2625,7 @@
   }
 
   let planTienda = null;
-  const COLOR_TIENDA = { coto: '#E30613', carrefour: '#1E4B9B', dia: '#E2001A', changomas: '#00A651', jumbo: '#2E9E44', vea: '#D7182A', disco: '#C8102E', farmaonline: '#7DB928', farmacity: '#00A859', simplicity: '#E5007E', pigmento: '#6A2C91', gpsfarma: '#0072BC' , andromaco: '#0E5AA7', bago: '#0072CE' };
+  const COLOR_TIENDA = { coto: '#E30613', carrefour: '#1E4B9B', dia: '#E2001A', changomas: '#00A651', jumbo: '#2E9E44', vea: '#D7182A', disco: '#C8102E', farmaonline: '#7DB928', farmacity: '#00A859', simplicity: '#E5007E', pigmento: '#6A2C91', juleriaque: '#111111', rouge: '#C8102E', gpsfarma: '#0072BC' , andromaco: '#0E5AA7', bago: '#0072CE' };
   const OTRA_APP = { url: 'https://compras-super-cart.vercel.app', nombre: 'Super Cart', lugar: 'el súper', titulo: 'Más barato en el súper' };
   const paraCruce = it => true;
   // Cruce con la otra app: productos de esta lista que hoy salen más baratos en las tiendas de la otra
@@ -4202,7 +4206,7 @@
 
   // ---------- cuenta de Google (Supabase) ----------
   let sb = null, user = null, perfil = null, sessionUid = null, esAdmin = false, tieneSupers = true;
-  const SUPERS_MAIL = ['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'gpsfarma', 'andromaco', 'bago'];
+  const SUPERS_MAIL = ['farmaonline', 'farmacity', 'simplicity', 'pigmento', 'juleriaque', 'rouge', 'gpsfarma', 'andromaco', 'bago'];
   async function initSupabase(){
     try {
       const c = await (await fetch('/api/config')).json();
@@ -4569,7 +4573,7 @@
     const sup = Array.isArray(p.supers) && p.supers.length ? p.supers : SUPERS_MAIL;
     $('supersBox').hidden = (p.modo || 'resumen') !== 'resumen';
     document.querySelectorAll('#supersSel input').forEach(c => { c.checked = sup.includes(c.value); c.disabled = c.checked && sup.length === 1; });
-    const nom = { farmaonline: 'Farmaonline', farmacity: 'Farmacity', simplicity: 'Simplicity', pigmento: 'Pigmento', gpsfarma: 'GPS Farma', andromaco: 'Andrómaco', bago: 'Nutricia Bagó' };
+    const nom = { farmaonline: 'Farmaonline', farmacity: 'Farmacity', simplicity: 'Simplicity', pigmento: 'Pigmento', juleriaque: 'Juleriaque', rouge: 'Rouge', gpsfarma: 'GPS Farma', andromaco: 'Andrómaco', bago: 'Nutricia Bagó' };
     $('supersTxt').textContent = sup.length > 1 ? `Te llega un solo mail comparando ${sup.map(s => nom[s]).join(', ').replace(/, ([^,]*)$/, ' y $1')}: el total de tu lista en cada uno y el precio de cada producto, con el más barato marcado.` : `Te llegan los precios de ${nom[sup[0]]}, con las ofertas arriba.`;
     // Listas que van al mail ("Recibir en el mail" por lista; se guarda en la columna en_mail)
     const enM = lists.filter(l => l.enMail !== false);
