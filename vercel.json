@@ -6,6 +6,9 @@
     },
     "api/cruce.js": {
       "maxDuration": 30
+    },
+    "api/mcp.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
