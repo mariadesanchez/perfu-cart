@@ -10,10 +10,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700;800&family=Fredoka:wght@700&display=swap" rel="stylesheet">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Perfu Cart">
-<meta name="application-name" content="Perfu Cart">
-<meta name="description" content="Todas las ofertas de cada tienda, comparación de precios entre 5 perfumerías y farmacias y tus listas con el mail diario de precios.">
-<title>Perfu Cart</title>
+<meta name="apple-mobile-web-app-title" content="Belleza & Perfu">
+<meta name="application-name" content="Belleza & Perfu">
+<meta name="description" content="Todas las ofertas de cada tienda, comparación de precios entre 9 perfumerías, farmacias y tiendas de laboratorio y tus listas con el mail diario de precios.">
+<title>Belleza & Perfu</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
@@ -878,7 +878,7 @@
 <header class="hero" id="hero" data-view="inicio">
   <div class="hero-in">
     <div class="brand"><span class="badge" id="netBadge" hidden>Sin conexión</span></div>
-    <svg class="logo" viewBox="-6 -6 392 236" role="img" aria-label="Perfu Cart">
+    <svg class="logo" viewBox="-6 -6 392 236" role="img" aria-label="Belleza & Perfu">
       <defs>
         <filter id="inflate" x="-12%" y="-15%" width="124%" height="145%" color-interpolation-filters="sRGB">
           <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="bump"/>
@@ -913,7 +913,7 @@
         </g>
       </g>
     </svg>
-    <h1>Tu perfumería, al mejor precio</h1>
+    <h1>Tu belleza, al mejor precio</h1>
     <ol class="steps"><li><b>Buscá</b> o escaneá un producto</li><li><b>Sumalo</b> a tu lista</li><li><b>Compará</b> y pasá el carrito a cada tienda</li></ol>
     <div class="gate" id="gate">
       <div class="gate-h">Ingresá a tu cuenta</div>
@@ -1076,7 +1076,7 @@
       <button class="btn btn-primary" type="submit" style="padding:12px 16px">Buscar</button>
     </form>
     <div class="bz-chips" id="bzChips" hidden aria-label="Búsquedas rápidas">
-      <button type="button" data-q="protector solar">☀️ Protector solar</button><button type="button" data-q="crema facial">🧴 Crema facial</button><button type="button" data-q="serum">💧 Sérum</button><button type="button" data-q="shampoo">🫧 Shampoo</button><button type="button" data-q="maquillaje">💄 Maquillaje</button><button type="button" data-q="dermaglos">✨ Dermaglós</button><button type="button" data-q="bagovit">🌿 Bagóvit</button>
+      <button type="button" data-q="perfume">🌸 Perfumes</button><button type="button" data-q="protector solar">☀️ Protector solar</button><button type="button" data-q="crema facial">🧴 Crema facial</button><button type="button" data-q="serum">💧 Sérum</button><button type="button" data-q="shampoo">🫧 Shampoo</button><button type="button" data-q="maquillaje">💄 Maquillaje</button><button type="button" data-q="dermaglos">✨ Dermaglós</button><button type="button" data-q="bagovit">🌿 Bagóvit</button>
     </div>
     <div class="preview" id="preview"><img id="previewImg" alt=""></div>
     <div id="reader"></div>
@@ -1209,7 +1209,7 @@
           <button type="button" class="btn" id="gsCopyCode" style="margin-top:6px">Copiar código del script</button></li>
         <li>Guardá, elegí la función <b>configurar</b> arriba y tocá <b>Ejecutar</b>. Aceptá los permisos que pide Google (es tu propio script).</li>
         <li>Acá en la app, en <b>Listas</b>, tocá <b>Copiar para Google Sheets</b> y pegalo en la hoja <b>Lista</b>, celda A2.</li>
-        <li>Listo. Para probar ya: menú <b>Perfu Cart › Registrar precios ahora</b>. En la hoja <b>Config</b> elegís tienda y hora.</li>
+        <li>Listo. Para probar ya: menú <b>Belleza & Perfu › Registrar precios ahora</b>. En la hoja <b>Config</b> elegís tienda y hora.</li>
       </ol>
       <div class="gs-auto">
         <b>Envío automático de tu lista</b>
@@ -1296,7 +1296,7 @@
   <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="admTitle">
     <div class="sheet-grab"></div>
     <h2><span id="admTitle">Usuarios autorizados</span><button type="button" class="xbtn" data-adm-close aria-label="Cerrar">✕</button></h2>
-    <p class="hint" style="margin:0 0 12px">Solo los mails de esta lista pueden ingresar a Perfu Cart. Esto lo ves solo vos.</p>
+    <p class="hint" style="margin:0 0 12px">Solo los mails de esta lista pueden ingresar a Belleza & Perfu. Esto lo ves solo vos.</p>
     <form id="admForm" class="adm-form" autocomplete="off">
       <input type="email" id="admEmail" placeholder="nombre@gmail.com" required aria-label="Gmail a autorizar">
       <input type="text" id="admNombre" placeholder="Nombre (opcional)" aria-label="Nombre">
@@ -1323,33 +1323,37 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // ---------- Belleza Cart: la sección "Cuidado y Belleza" de Perfu (/belleza), con las tiendas de Perfu y Andrómaco.
-  // Comparte las listas con Perfu; cambia el nombre, el logo, los colores y el cartel de arriba.
-  window.APP_BELLEZA = /^\/belleza\/?$/.test(location.pathname);
-  if (window.APP_BELLEZA) {
-    document.title = 'Belleza Cart';
+  // ---------- Belleza & Perfu: una sola sección para perfumería, maquillaje, dermocosmética y cuidado personal.
+  // Funciona igual en / y en /belleza (links viejos). Nombre, logo, colores y cartel de arriba.
+  window.APP_BELLEZA = true;
+  (function(){
+    document.title = 'Belleza & Perfu';
     document.documentElement.style.setProperty('--sec1', '#E79BEA'); document.documentElement.style.setProperty('--sec2', '#B43FC0');
     const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = '#B43FC0';
     const lg = document.querySelector('#hero .logo');
     if (lg) {
-      lg.setAttribute('aria-label', 'Belleza Cart');
+      lg.setAttribute('aria-label', 'Belleza & Perfu');
       const st = lg.querySelectorAll('#celeste stop'); ['#FBE3FF', '#E58CEB', '#B43FC0'].forEach((c, i) => st[i] && st[i].setAttribute('stop-color', c));
       const tx = lg.querySelectorAll('text');
+      const letras = (el, txt, dy, dx) => { el.textContent = ''; [...txt].forEach((ch, i) => { const sp = document.createElementNS('http://www.w3.org/2000/svg', 'tspan'); sp.textContent = ch; if (i) { sp.setAttribute('dx', dx); sp.setAttribute('dy', dy[i] || 0); } el.appendChild(sp); }); };
       if (tx[0]) {
-        tx[0].textContent = ''; const dy = [0, -4, 6, -7, 4, -5, 6];
-        [...'Belleza'].forEach((ch, i) => { const sp = document.createElementNS('http://www.w3.org/2000/svg', 'tspan'); sp.textContent = ch; if (i) { sp.setAttribute('dx', 4); sp.setAttribute('dy', dy[i]); } tx[0].appendChild(sp); });
+        letras(tx[0], 'Belleza', [0, -4, 6, -7, 4, -5, 6], 4);
         tx[0].setAttribute('rotate', '-7 4 -5 6 -3 5 -4'); tx[0].setAttribute('font-size', '84'); tx[0].setAttribute('textLength', '345'); tx[0].setAttribute('lengthAdjust', 'spacingAndGlyphs');
       }
+      if (tx[1]) {
+        letras(tx[1], '& Perfu', [0, 5, -6, 4, -5, 6, -4], 4);
+        tx[1].setAttribute('x', '40'); tx[1].setAttribute('rotate', '6 -4 5 -6 4 -5 6'); tx[1].setAttribute('font-size', '84'); tx[1].setAttribute('textLength', '320'); tx[1].setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      }
     }
-    const h1 = document.querySelector('#hero h1'); if (h1) h1.textContent = 'Tu cuidado y belleza, al mejor precio';
+    const h1 = document.querySelector('#hero h1'); if (h1) h1.textContent = 'Tu belleza, al mejor precio';
     const run = document.querySelector('.ticker .run');
     if (run) {
-      const fr = ['💄 Cuidado y belleza al mejor precio', '🧴 Dermocosmética, protección solar, cuidado facial y capilar', '🏷️ Andrómaco, Farmacity, Farmaonline, Simplicity, Pigmento y GPS Farma', '🔎 El mismo producto en todas las tiendas, por código de barras', '📧 Tu lista con los precios de hoy, en tu mail'];
+      const fr = ['💄 Perfumes, maquillaje y cuidado personal al mejor precio', '🧴 Dermocosmética, protección solar, cuidado facial y capilar', '🏷️ Juleriaque, Rouge, Pigmento, Farmacity, Farmaonline, Simplicity, GPS Farma, Andrómaco y Nutricia Bagó', '🔎 El mismo producto en todas las tiendas, por código de barras', '📧 Tu lista con los precios de hoy, en tu mail'];
       run.innerHTML = ''; fr.concat(fr).forEach(t => { const sp = document.createElement('span'); sp.textContent = t; run.appendChild(sp); });
     }
     const chips = document.getElementById('bzChips'); if (chips) chips.hidden = false;
-    const q = document.getElementById('cotoQ'); if (q) q.placeholder = 'Ej: protector solar, crema facial o código';
-  }
+    const q = document.getElementById('cotoQ'); if (q) q.placeholder = 'Ej: perfume, protector solar o código';
+  })();
 </script>
 <script src="/vendor/zxing-reader.js"></script>
 <script>
@@ -1548,7 +1552,7 @@
   } catch(e) {}
 
   // ---------- pasar el carrito a la tienda para pagar ----------
-  // Tiendas de la otra app (Super Cart / Perfu Cart): también pueden quedar en el carrito más conveniente
+  // Tiendas de la otra app (Super Cart / Belleza & Perfu): también pueden quedar en el carrito más conveniente
   const OTRAS_TIENDAS = { coto: 'Coto', carrefour: 'Carrefour', dia: 'Día', changomas: 'ChangoMás', jumbo: 'Jumbo', vea: 'Vea', disco: 'Disco' };
   const nomT = k => SUPERS[k] || OTRAS_TIENDAS[k] || k;
   const superKey = () => Object.fromEntries(Object.entries({ ...OTRAS_TIENDAS, ...SUPERS }).map(([k, v]) => [v, k]));
@@ -2945,7 +2949,7 @@
         if (!(k in SUPERS) && !sepPuesto) {
           sepPuesto = true;
           const sp = document.createElement('div'); sp.className = 'grp-sep';
-          sp.textContent = (SUPERS.coto ? '💄 En farmacias y perfumerías (precios de Perfu Cart)' : '🛒 En el súper (precios de Super Cart)');
+          sp.textContent = (SUPERS.coto ? '💄 En farmacias y perfumerías (precios de Belleza & Perfu)' : '🛒 En el súper (precios de Super Cart)');
           o.appendChild(sp);
         }
         const vivas = g.lines.filter(x => !x.tachado);
@@ -3271,7 +3275,7 @@
   const ICO_TACHO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
   const escL = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // La lista que se llama "Mi lista" (la de siempre) se muestra con el nombre de la sección: "Tecno Lista", "Super Lista"…
-  function nombreLista(n){ return !n || /^mi lista$/i.test(String(n).trim()) ? (window.APP_BELLEZA ? 'Belleza' : 'Perfu') + ' Lista' : n; }
+  function nombreLista(n){ return !n || /^mi lista$/i.test(String(n).trim()) ? 'Belleza & Perfu Lista' : n; }
   function pintarListasModal(editId, creando){
     const rows = $('lmodRows'); if (!rows) return;
     const cur = ensureList();
@@ -3819,7 +3823,7 @@
     loadGsCode().then(x => copyText(x, 'Código copiado: pegalo en Apps Script')).catch(() => toast('No se pudo traer el código. Probá de nuevo con internet.'));
   });
   // ---------- compartir la lista tal cual se ve: link a /compartida (con fotos y precios) por WhatsApp, mail o lo que sea ----------
-  const APP_KEY = 'perfu', APP_NOM = 'Perfu Cart';
+  const APP_KEY = 'perfu', APP_NOM = 'Belleza & Perfu';
   const compartidas = new Map();
   function fotoLista(l){
     const st = it => { const x = itemStatus(it); return x === 'nostock' ? 'sin stock online' : x === 'notfound' ? 'no está online' : ''; };
@@ -3885,7 +3889,7 @@
     const n = l.items.filter(i => i.ean).length;
     a.setAttribute('aria-disabled', String(!n));
     if (!n) { a.href = '#'; return; }
-    const text = `Mi lista “${l.name}” en Perfu Cart (${n} productos): ${shortLink(l)}`;
+    const text = `Mi lista “${l.name}” en Belleza & Perfu (${n} productos): ${shortLink(l)}`;
     a.href = 'https://wa.me/?text=' + encodeURIComponent(text);
   }
   async function nameForEan(ean){
@@ -4130,7 +4134,7 @@
     });
     if (hasOff) {
       const wa = document.createElement('a'); wa.className = 'of-wa'; wa.target = '_blank'; wa.rel = 'noopener'; wa.setAttribute('aria-label', 'Compartir por WhatsApp');
-      wa.href = 'https://wa.me/?text=' + encodeURIComponent(`Oferta en ${ofNom()}: ${o.producto} a ${fmt(o.oferta)} (-${pct}%, antes ${fmt(o.regular)}). Visto en Perfu Cart: ${APP_URL}`);
+      wa.href = 'https://wa.me/?text=' + encodeURIComponent(`Oferta en ${ofNom()}: ${o.producto} a ${fmt(o.oferta)} (-${pct}%, antes ${fmt(o.regular)}). Visto en Belleza & Perfu: ${APP_URL}`);
       wa.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3.2A12.7 12.7 0 0 0 5.1 22.4L3.3 28.8l6.6-1.7A12.7 12.7 0 1 0 16 3.2zm5.8 15.3c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6.3-.5c.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.8s1.2 3.2 1.4 3.4c.2.2 2.4 3.6 5.7 5 .8.4 1.4.6 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.7.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>';
       el.querySelector('.acts').appendChild(wa);
     }
@@ -4316,7 +4320,7 @@
   const GATE_BTN = $('gateLogin').innerHTML;
   function gateBusy(on){ const b = $('gateLogin'); b.disabled = on; b.innerHTML = on ? '<span class="gate-spin" aria-hidden="true"></span><span>Ingresando…</span>' : GATE_BTN; if (!on && gisListo) cubrir(b); }
   $('gateLogin').addEventListener('click', () => { gateBusy(true); $('gateMsg').hidden = true; login().finally(() => setTimeout(() => gateBusy(false), 6000)); });
-  const NO_HAB = 'no tiene acceso a Perfu Cart. Pedile acceso a quien te compartió la app y, cuando te habilite, volvé a ingresar.';
+  const NO_HAB = 'no tiene acceso a Belleza & Perfu. Pedile acceso a quien te compartió la app y, cuando te habilite, volvé a ingresar.';
   async function noAutorizado(email){
     try { await sb.auth.signOut(); } catch (_) {}
     user = null; perfil = null; sessionUid = null; esAdmin = false; renderAdminBtns(); renderWho(); renderAcct();
@@ -4335,7 +4339,7 @@
     return true;
   }
   async function cargarCuenta(){
-    // Preferencias del mail de Perfu Cart: tabla perfu_perfiles (la primera vez se crea la fila)
+    // Preferencias del mail de Belleza & Perfu: tabla perfu_perfiles (la primera vez se crea la fila)
     let { data: pf } = await sb.from('perfu_perfiles').select('avisos,modo,supers').eq('id', user.id).maybeSingle();
     if (!pf) { const r = await sb.from('perfu_perfiles').insert({ id: user.id }).select('avisos,modo,supers').maybeSingle(); pf = r.data; }
     perfil = pf || { email: user.email, avisos: true, modo: 'resumen' };
@@ -4463,7 +4467,7 @@
   async function login(hint){
     if (typeof hint !== 'string' || !hint) { irAlInicio(); return; }
     if (!sb) { $('loginErr').textContent = 'El ingreso todavía no está disponible.'; $('loginErr').hidden = false; go('cuenta'); return; }
-    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { queryParams: { login_hint: hint }, redirectTo: location.origin + (window.APP_BELLEZA ? '/belleza' : '/') + (location.hash && location.hash.length > 1 ? location.hash : '#listas') } });
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { queryParams: { login_hint: hint }, redirectTo: location.origin + location.pathname + (location.hash && location.hash.length > 1 ? location.hash : '#listas') } });
     if (error) { $('loginErr').textContent = 'No se pudo ingresar. Probá de nuevo.'; $('loginErr').hidden = false; }
   }
   // Ingreso con el botón de Google dentro de la página: Google muestra la dirección de la app
@@ -4605,16 +4609,16 @@
     if (r.checked) guardarPerfil({ modo: r.value }, r.value === 'resumen' ? 'Listo: te mandamos el resumen todos los días' : 'Listo: solo te escribimos cuando algo entra en oferta');
   }));
 
-  // ---------- links especiales: baja del mail, links viejos e importación desde Perfu Cart ----------
+  // ---------- links especiales: baja del mail, links viejos e importación desde Belleza & Perfu ----------
   function mensaje(titulo, texto){ if (gated()) { gateMsg(titulo, texto); return; } $('msgTitle').textContent = titulo; $('msgText').textContent = texto; setOff('msgCard', false); go('cuenta'); }
   async function handleLinks(){
     const sp = new URLSearchParams(location.search);
     const baja = sp.get('baja'), viejo = sp.get('confirmar') || sp.get('copia');
     if (!baja && !viejo) return false;
     history.replaceState(null, '', location.pathname + '#cuenta');
-    if (viejo) { mensaje('Perfu Cart cambió', 'Ahora tus listas quedan guardadas en tu cuenta. Tocá “Ingresar”.'); return true; }
+    if (viejo) { mensaje('Belleza & Perfu cambió', 'Ahora tus listas quedan guardadas en tu cuenta. Tocá “Ingresar”.'); return true; }
     if (!/^[0-9a-f-]{36}$/i.test(baja)) { mensaje('Ese link es de la versión anterior', 'Ingresá y desactivá “Recibir el mail diario” en Mi cuenta.'); return true; }
-    if (!confirm('¿Dejar de recibir el mail diario de Perfu Cart?')) { go('cuenta'); return true; }
+    if (!confirm('¿Dejar de recibir el mail diario de Belleza & Perfu?')) { go('cuenta'); return true; }
     let ok = false;
     if (sb) { const { data, error } = await sb.rpc('perfu_baja_avisos', { token: baja }); ok = !error && !!data; if (ok && perfil) perfil.avisos = false; }
     mensaje(ok ? 'Listo' : 'No pudimos darte de baja', ok ? 'No te vamos a mandar más mails. Si querés volver a recibirlos, activalo en tu cuenta.' : 'Ingresá y desactivá “Recibir el mail diario” en Mi cuenta.');
@@ -4639,7 +4643,7 @@
       if (d.planilla && d.planilla.url && !store.get('super-planilla', {}).url) store.set('super-planilla', d.planilla);
       store.set('super-listas', lists);
       history.replaceState(null, '', location.pathname + '#listas');
-      setTimeout(() => toast(n ? `Trajimos ${n === 1 ? 'tu lista' : 'tus ' + n + ' listas'} de Perfu Cart` : 'Listo'), 600);
+      setTimeout(() => toast(n ? `Trajimos ${n === 1 ? 'tu lista' : 'tus ' + n + ' listas'} de Belleza & Perfu` : 'Listo'), 600);
       return true;
     } catch (_) { history.replaceState(null, '', location.pathname + '#ofertas'); return false; }
   }
