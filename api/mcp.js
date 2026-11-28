@@ -4,6 +4,11 @@
 // La compra la hace la persona en la tienda, con el link que devuelve cada producto.
 
 const vtex = require('./vtex.js');
+const WIDGET = require('../lib/mcp-widget.js');
+const UI_URI = 'ui://belleza-perfu/resultados.html';
+const UI_MIME = 'text/html;profile=mcp-app';
+const UI_META = { ui: { prefersBorder: false, csp: { resourceDomains: ['https://*.vteximg.com.br', 'https://*.vtexassets.com', 'https://tienda.andromaco.com', 'https://gpsfarma.com', 'https://cdn.shopify.com', 'https://tiendanutriciabago.com.ar'] } } };
+const TOOL_META = { ui: { resourceUri: UI_URI }, 'openai/outputTemplate': UI_URI };
 
 const SERVIDOR = { name: 'belleza-perfu', title: 'Belleza & Perfu', version: '1.0.0' };
 const VERSIONES = ['2025-06-18', '2025-03-26', '2024-11-05'];
@@ -45,6 +50,7 @@ const HERRAMIENTAS = [
       required: ['consulta'],
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
+    _meta: TOOL_META,
   },
   {
     name: 'comparar_precios',
@@ -60,6 +66,7 @@ const HERRAMIENTAS = [
       },
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
+    _meta: TOOL_META,
   },
   {
     name: 'mejor_carrito',
@@ -85,6 +92,7 @@ const HERRAMIENTAS = [
       required: ['productos'],
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
+    _meta: TOOL_META,
   },
 ];
 
@@ -156,13 +164,13 @@ async function buscarProducto({ consulta, tiendas, max_por_tienda }) {
   }));
   const total = rs.reduce((s, r) => s + r.encontrados, 0);
   const resumen = `Búsqueda "${c}"${ean ? ' (código de barras)' : ''}: ${total} resultados en ${rs.filter(r => r.encontrados).length} de ${ts.length} tiendas.`;
-  return { texto: resumen, datos: { consulta: c, por_codigo: !!ean, resultados: rs } };
+  return { texto: resumen, datos: { tipo: 'busqueda', consulta: c, por_codigo: !!ean, resultados: rs } };
 }
 
 async function compararPrecios(args) {
   const { ean, nombre, ts, hits } = await comparar(args);
   const que = ean ? 'código ' + ean : '"' + nombre + '"';
-  if (!hits.length) return { texto: `No encontré ${que} con stock en ninguna de las ${ts.length} tiendas.`, datos: { encontrado: false, tiendas_consultadas: ts.map(k => TIENDAS[k].nombre) } };
+  if (!hits.length) return { texto: `No encontré ${que} con stock en ninguna de las ${ts.length} tiendas.`, datos: { tipo: 'comparacion', encontrado: false, tiendas_consultadas: ts.map(k => TIENDAS[k].nombre) } };
   const lista = hits.map(h => ({ ...limpio(h.k, h.p), coincidencia: h.exacto ? 'exacta (código de barras)' : 'por nombre (verificar que sea el mismo producto)' }));
   const barata = lista[0], cara = lista[lista.length - 1];
   const noEsta = ts.filter(k => !hits.some(h => h.k === k)).map(k => TIENDAS[k].nombre);
@@ -170,7 +178,7 @@ async function compararPrecios(args) {
   if (lista.length > 1 && cara.precio > barata.precio) texto += ` En ${cara.tienda} cuesta ${pesos(cara.precio)} (ahorrás ${pesos(cara.precio - barata.precio)}, ${Math.round((1 - barata.precio / cara.precio) * 100)}%).`;
   texto += '\n' + lista.map((x, i) => `${i + 1}. ${x.tienda}: ${pesos(x.precio)}${x.promo ? ' (' + x.promo + ')' : ''} · ${x.link}`).join('\n');
   if (noEsta.length) texto += `\nSin stock o no encontrado en: ${noEsta.join(', ')}.`;
-  return { texto, datos: { encontrado: true, mas_barato: barata, precios: lista, no_encontrado_en: noEsta } };
+  return { texto, datos: { tipo: 'comparacion', encontrado: true, mas_barato: barata, precios: lista, no_encontrado_en: noEsta } };
 }
 
 async function mejorCarrito({ productos, tiendas }) {
@@ -193,14 +201,14 @@ async function mejorCarrito({ productos, tiendas }) {
     (porTienda[x.tienda] = porTienda[x.tienda] || { tienda: x.tienda, subtotal: 0, productos: [] });
     porTienda[x.tienda].subtotal += sub;
     porTienda[x.tienda].productos.push({ nombre: x.nombre, cantidad: r.cantidad, precio: x.precio, subtotal: sub, link: x.link });
-    return { pedido: r.pedido, cantidad: r.cantidad, encontrado: true, comprar_en: x.tienda, precio: x.precio, subtotal: sub, nombre: x.nombre, link: x.link, coincidencia: b.exacto ? 'exacta' : 'por nombre' };
+    return { pedido: r.pedido, cantidad: r.cantidad, encontrado: true, comprar_en: x.tienda, precio: x.precio, subtotal: sub, nombre: x.nombre, marca: x.marca, imagen: x.imagen, precio_lista: x.precio_lista, link: x.link, coincidencia: b.exacto ? 'exacta' : 'por nombre' };
   });
   const grupos = Object.values(porTienda).sort((a, b) => b.subtotal - a.subtotal);
   let texto = `Mejor compra: ${pesos(total)} en ${grupos.length} ${grupos.length === 1 ? 'tienda' : 'tiendas'}`
     + (totalCaro > total ? ` (ahorrás ${pesos(totalCaro - total)} frente a la opción más cara de cada producto).` : '.');
   texto += '\n' + grupos.map(g => `• ${g.tienda} (${pesos(g.subtotal)}): ` + g.productos.map(p => `${p.cantidad} × ${p.nombre} a ${pesos(p.precio)}`).join('; ')).join('\n');
   if (faltan.length) texto += `\nNo encontrados con stock: ${faltan.join(', ')}.`;
-  return { texto, datos: { total, ahorro: Math.max(0, totalCaro - total), por_tienda: grupos, detalle, no_encontrados: faltan } };
+  return { texto, datos: { tipo: 'carrito', total, ahorro: Math.max(0, totalCaro - total), por_tienda: grupos, detalle, no_encontrados: faltan } };
 }
 
 const EJECUTAR = { buscar_producto: buscarProducto, comparar_precios: compararPrecios, mejor_carrito: mejorCarrito };
@@ -215,10 +223,15 @@ async function atender(m) {
   switch (method) {
     case 'initialize': {
       const pedida = params && params.protocolVersion;
-      return ok({ protocolVersion: VERSIONES.includes(pedida) ? pedida : VERSIONES[0], capabilities: { tools: { listChanged: false } }, serverInfo: SERVIDOR, instructions: INSTRUCCIONES });
+      return ok({ protocolVersion: VERSIONES.includes(pedida) ? pedida : VERSIONES[0], capabilities: { tools: { listChanged: false }, resources: {}, extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [UI_MIME] } } }, serverInfo: SERVIDOR, instructions: INSTRUCCIONES });
     }
     case 'ping': return ok({});
     case 'tools/list': return ok({ tools: HERRAMIENTAS });
+    case 'resources/list': return ok({ resources: [{ uri: UI_URI, name: 'resultados', title: 'Tarjetas de Belleza & Perfu', mimeType: UI_MIME, _meta: UI_META }] });
+    case 'resources/templates/list': return ok({ resourceTemplates: [] });
+    case 'resources/read':
+      if (!params || params.uri !== UI_URI) return err(-32002, 'Recurso no encontrado');
+      return ok({ contents: [{ uri: UI_URI, mimeType: UI_MIME, text: WIDGET, _meta: UI_META }] });
     case 'tools/call': {
       const fn = EJECUTAR[params && params.name];
       if (!fn) return err(-32602, 'Herramienta desconocida: ' + (params && params.name));
